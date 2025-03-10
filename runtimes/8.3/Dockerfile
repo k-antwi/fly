@@ -12,7 +12,7 @@ WORKDIR /var/www/html
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV SUPERVISOR_PHP_COMMAND="/usr/bin/php -d variables_order=EGPCS /var/www/html/artisan serve --host=0.0.0.0 --port=80"
-ENV SUPERVISOR_PHP_USER="sail"
+ENV SUPERVISOR_PHP_USER="fly"
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -63,7 +63,7 @@ RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 fly
 
 COPY start-container /usr/local/bin/start-container
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY php.ini /etc/php/8.3/cli/conf.d/99-sail.ini
+COPY php.ini /etc/php/8.3/cli/conf.d/99-fly.ini
 RUN chmod +x /usr/local/bin/start-container
 
 EXPOSE 80/tcp

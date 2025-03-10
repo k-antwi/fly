@@ -36,7 +36,7 @@ trait InteractsWithDockerComposeServices
     protected $defaultServices = ['mysql', 'redis', 'selenium', 'mailpit'];
 
     /**
-     * Gather the desired Sail services using an interactive prompt.
+     * Gather the desired Fly services using an interactive prompt.
      *
      * @return array
      */

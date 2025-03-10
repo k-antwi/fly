@@ -9,7 +9,7 @@ pgsql:
         POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
     volumes:
         - 'fly-pgsql:/var/lib/postgresql/data'
-        - './vendor/laravel/fly/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+        - './vendor/k-antwi/fly/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
     networks:
         - fly
     healthcheck:
