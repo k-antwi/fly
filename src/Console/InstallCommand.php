@@ -1,13 +1,13 @@
 <?php
 
-namespace Laravel\Sail\Console;
+namespace KAntwi\Fly\Console;
 
 use Illuminate\Console\Command;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Process\Process;
 
-#[AsCommand(name: 'sail:install')]
+#[AsCommand(name: 'fly:install')]
 class InstallCommand extends Command
 {
     use Concerns\InteractsWithDockerComposeServices;
@@ -17,7 +17,7 @@ class InstallCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'sail:install
+    protected $signature = 'fly:install
                 {--with= : The services that should be included in the installation}
                 {--devcontainer : Create a .devcontainer configuration directory}
                 {--php=8.4 : The PHP version that should be used}';
@@ -27,7 +27,7 @@ class InstallCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Install Laravel Sail\'s default Docker Compose file';
+    protected $description = 'Install Fly\'s default Docker Compose file';
 
     /**
      * Execute the console command.
@@ -61,16 +61,16 @@ class InstallCommand extends Command
         $this->prepareInstallation($services);
 
         $this->output->writeln('');
-        $this->components->info('Sail scaffolding installed successfully. You may run your Docker containers using Sail\'s "up" command.');
+        $this->components->info('Fly scaffolding installed successfully. You may run your Docker containers using Fly\'s "up" command.');
 
-        $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/sail up</>');
+        $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/fly up</>');
 
         if (in_array('mysql', $services) ||
             in_array('mariadb', $services) ||
             in_array('pgsql', $services)) {
             $this->components->warn('A database service was installed. Run "artisan migrate" to prepare your database:');
 
-            $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/sail artisan migrate</>');
+            $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/fly artisan migrate</>');
         }
 
         $this->output->writeln('');

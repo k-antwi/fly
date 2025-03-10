@@ -5,4 +5,4 @@ selenium:
     volumes:
         - '/dev/shm:/dev/shm'
     networks:
-        - sail
+        - fly

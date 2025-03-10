@@ -1,6 +1,6 @@
 <?php
 
-namespace Laravel\Sail\Console\Concerns;
+namespace KAntwi\Fly\Console\Concerns;
 
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
@@ -98,7 +98,7 @@ trait InteractsWithDockerComposeServices
             })->filter(function ($service) use ($compose) {
                 return ! array_key_exists($service, $compose['volumes'] ?? []);
             })->each(function ($service) use (&$compose) {
-                $compose['volumes']["sail-{$service}"] = ['driver' => 'local'];
+                $compose['volumes']["fly-{$service}"] = ['driver' => 'local'];
             });
 
         // If the list of volumes is empty, we can remove it...
@@ -154,7 +154,7 @@ trait InteractsWithDockerComposeServices
             $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=mariadb", $environment);
         }
 
-        $environment = str_replace('DB_USERNAME=root', "DB_USERNAME=sail", $environment);
+        $environment = str_replace('DB_USERNAME=root', "DB_USERNAME=fly", $environment);
         $environment = preg_replace("/DB_PASSWORD=(.*)/", "DB_PASSWORD=password", $environment);
 
         if (in_array('memcached', $services)) {
@@ -270,12 +270,12 @@ trait InteractsWithDockerComposeServices
 
         if (count($services) > 0) {
             $this->runCommands([
-                './vendor/bin/sail pull '.implode(' ', $services),
+                './vendor/bin/fly pull '.implode(' ', $services),
             ]);
         }
 
         $this->runCommands([
-            './vendor/bin/sail build',
+            './vendor/bin/fly build',
         ]);
     }
 

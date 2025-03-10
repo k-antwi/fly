@@ -3,9 +3,9 @@ valkey:
     ports:
         - '${FORWARD_VALKEY_PORT:-6379}:6379'
     volumes:
-        - 'sail-valkey:/data'
+        - 'fly-valkey:/data'
     networks:
-        - sail
+        - fly
     healthcheck:
         test: ["CMD", "valkey-cli", "ping"]
         retries: 3

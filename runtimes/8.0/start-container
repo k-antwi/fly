@@ -6,7 +6,7 @@ if [ "$SUPERVISOR_PHP_USER" != "root" ] && [ "$SUPERVISOR_PHP_USER" != "sail" ];
 fi
 
 if [ ! -z "$WWWUSER" ]; then
-    usermod -u $WWWUSER sail
+    usermod -u $WWWUSER fly
 fi
 
 if [ ! -d /.composer ]; then

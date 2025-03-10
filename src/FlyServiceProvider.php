@@ -1,14 +1,14 @@
 <?php
 
-namespace Laravel\Sail;
+namespace KAntwi\Fly;
 
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Sail\Console\AddCommand;
-use Laravel\Sail\Console\InstallCommand;
-use Laravel\Sail\Console\PublishCommand;
+use KAntwi\Fly\Console\AddCommand;
+use KAntwi\Fly\Console\InstallCommand;
+use KAntwi\Fly\Console\PublishCommand;
 
-class SailServiceProvider extends ServiceProvider implements DeferrableProvider
+class FlyServiceProvider extends ServiceProvider implements DeferrableProvider
 {
     /**
      * Bootstrap any application services.
@@ -47,15 +47,15 @@ class SailServiceProvider extends ServiceProvider implements DeferrableProvider
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__ . '/../runtimes' => $this->app->basePath('docker'),
-            ], ['sail', 'sail-docker']);
+            ], ['fly', 'fly-docker']);
 
             $this->publishes([
-                __DIR__ . '/../bin/sail' => $this->app->basePath('sail'),
-            ], ['sail', 'sail-bin']);
+                __DIR__ . '/../bin/fly' => $this->app->basePath('fly'),
+            ], ['fly', 'fly-bin']);
 
             $this->publishes([
                 __DIR__ . '/../database' => $this->app->basePath('docker'),
-            ], ['sail', 'sail-database']);
+            ], ['fly', 'fly-database']);
         }
     }
 

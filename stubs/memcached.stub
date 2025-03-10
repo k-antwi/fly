@@ -3,4 +3,4 @@ memcached:
     ports:
         - '${FORWARD_MEMCACHED_PORT:-11211}:11211'
     networks:
-        - sail
+        - fly

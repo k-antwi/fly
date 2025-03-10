@@ -10,4 +10,4 @@ soketi:
         - '${PUSHER_PORT:-6001}:6001'
         - '${PUSHER_METRICS_PORT:-9601}:9601'
     networks:
-        - sail
+        - fly

@@ -10,7 +10,7 @@ case "${UNAMEOUT}" in
 esac
 
 if [ "$MACHINE" == "UNKNOWN" ]; then
-    echo "Unsupported operating system [$(uname -s)]. Laravel Sail supports macOS, Linux, and Windows (WSL2)." >&2
+    echo "Unsupported operating system [$(uname -s)]. Fly supports macOS, Linux, and Windows (WSL2)." >&2
 
     exit 1
 fi
@@ -30,93 +30,93 @@ fi
 
 # Function that prints the available commands...
 function display_help {
-    echo "Laravel Sail"
+    echo "Fly"
     echo
     echo "${YELLOW}Usage:${NC}" >&2
-    echo "  sail COMMAND [options] [arguments]"
+    echo "  fly COMMAND [options] [arguments]"
     echo
     echo "Unknown commands are passed to the docker-compose binary."
     echo
     echo "${YELLOW}docker-compose Commands:${NC}"
-    echo "  ${GREEN}sail up${NC}        Start the application"
-    echo "  ${GREEN}sail up -d${NC}     Start the application in the background"
-    echo "  ${GREEN}sail stop${NC}      Stop the application"
-    echo "  ${GREEN}sail restart${NC}   Restart the application"
-    echo "  ${GREEN}sail ps${NC}        Display the status of all containers"
+    echo "  ${GREEN}fly up${NC}        Start the application"
+    echo "  ${GREEN}fly up -d${NC}     Start the application in the background"
+    echo "  ${GREEN}fly stop${NC}      Stop the application"
+    echo "  ${GREEN}fly restart${NC}   Restart the application"
+    echo "  ${GREEN}fly ps${NC}        Display the status of all containers"
     echo
     echo "${YELLOW}Artisan Commands:${NC}"
-    echo "  ${GREEN}sail artisan ...${NC}          Run an Artisan command"
-    echo "  ${GREEN}sail artisan queue:work${NC}"
+    echo "  ${GREEN}fly artisan ...${NC}          Run an Artisan command"
+    echo "  ${GREEN}fly artisan queue:work${NC}"
     echo
     echo "${YELLOW}PHP Commands:${NC}"
-    echo "  ${GREEN}sail php ...${NC}   Run a snippet of PHP code"
-    echo "  ${GREEN}sail php -v${NC}"
+    echo "  ${GREEN}fly php ...${NC}   Run a snippet of PHP code"
+    echo "  ${GREEN}fly php -v${NC}"
     echo
     echo "${YELLOW}Composer Commands:${NC}"
-    echo "  ${GREEN}sail composer ...${NC}                       Run a Composer command"
-    echo "  ${GREEN}sail composer require laravel/sanctum${NC}"
+    echo "  ${GREEN}fly composer ...${NC}                       Run a Composer command"
+    echo "  ${GREEN}fly composer require laravel/sanctum${NC}"
     echo
     echo "${YELLOW}Node Commands:${NC}"
-    echo "  ${GREEN}sail node ...${NC}         Run a Node command"
-    echo "  ${GREEN}sail node --version${NC}"
+    echo "  ${GREEN}fly node ...${NC}         Run a Node command"
+    echo "  ${GREEN}fly node --version${NC}"
     echo
     echo "${YELLOW}NPM Commands:${NC}"
-    echo "  ${GREEN}sail npm ...${NC}        Run a npm command"
-    echo "  ${GREEN}sail npx${NC}            Run a npx command"
-    echo "  ${GREEN}sail npm run prod${NC}"
+    echo "  ${GREEN}fly npm ...${NC}        Run a npm command"
+    echo "  ${GREEN}fly npx${NC}            Run a npx command"
+    echo "  ${GREEN}fly npm run prod${NC}"
     echo
     echo "${YELLOW}PNPM Commands:${NC}"
-    echo "  ${GREEN}sail pnpm ...${NC}        Run a pnpm command"
-    echo "  ${GREEN}sail pnpx${NC}            Run a pnpx command"
-    echo "  ${GREEN}sail pnpm run prod${NC}"
+    echo "  ${GREEN}fly pnpm ...${NC}        Run a pnpm command"
+    echo "  ${GREEN}fly pnpx${NC}            Run a pnpx command"
+    echo "  ${GREEN}fly pnpm run prod${NC}"
     echo
     echo "${YELLOW}Yarn Commands:${NC}"
-    echo "  ${GREEN}sail yarn ...${NC}        Run a Yarn command"
-    echo "  ${GREEN}sail yarn run prod${NC}"
+    echo "  ${GREEN}fly yarn ...${NC}        Run a Yarn command"
+    echo "  ${GREEN}fly yarn run prod${NC}"
     echo
     echo "${YELLOW}Bun Commands:${NC}"
-    echo "  ${GREEN}sail bun ...${NC}        Run a bun command"
-    echo "  ${GREEN}sail bunx${NC}           Run a bunx command"
-    echo "  ${GREEN}sail bun run prod${NC}"
+    echo "  ${GREEN}fly bun ...${NC}        Run a bun command"
+    echo "  ${GREEN}fly bunx${NC}           Run a bunx command"
+    echo "  ${GREEN}fly bun run prod${NC}"
     echo
     echo "${YELLOW}Database Commands:${NC}"
-    echo "  ${GREEN}sail mysql${NC}     Start a MySQL CLI session within the 'mysql' container"
-    echo "  ${GREEN}sail mariadb${NC}   Start a MySQL CLI session within the 'mariadb' container"
-    echo "  ${GREEN}sail psql${NC}      Start a PostgreSQL CLI session within the 'pgsql' container"
-    echo "  ${GREEN}sail mongodb${NC}   Start a Mongo Shell session within the 'mongodb' container"
-    echo "  ${GREEN}sail redis${NC}     Start a Redis CLI session within the 'redis' container"
-    echo "  ${GREEN}sail valkey${NC}    Start a Valkey CLI session within the 'valkey' container"
+    echo "  ${GREEN}fly mysql${NC}     Start a MySQL CLI session within the 'mysql' container"
+    echo "  ${GREEN}fly mariadb${NC}   Start a MySQL CLI session within the 'mariadb' container"
+    echo "  ${GREEN}fly psql${NC}      Start a PostgreSQL CLI session within the 'pgsql' container"
+    echo "  ${GREEN}fly mongodb${NC}   Start a Mongo Shell session within the 'mongodb' container"
+    echo "  ${GREEN}fly redis${NC}     Start a Redis CLI session within the 'redis' container"
+    echo "  ${GREEN}fly valkey${NC}    Start a Valkey CLI session within the 'valkey' container"
     echo
     echo "${YELLOW}Debugging:${NC}"
-    echo "  ${GREEN}sail debug ...${NC}          Run an Artisan command in debug mode"
-    echo "  ${GREEN}sail debug queue:work${NC}"
+    echo "  ${GREEN}fly debug ...${NC}          Run an Artisan command in debug mode"
+    echo "  ${GREEN}fly debug queue:work${NC}"
     echo
     echo "${YELLOW}Running Tests:${NC}"
-    echo "  ${GREEN}sail test${NC}          Run the PHPUnit tests via the Artisan test command"
-    echo "  ${GREEN}sail phpunit ...${NC}   Run PHPUnit"
-    echo "  ${GREEN}sail pest ...${NC}      Run Pest"
-    echo "  ${GREEN}sail pint ...${NC}      Run Pint"
-    echo "  ${GREEN}sail dusk${NC}          Run the Dusk tests (Requires the laravel/dusk package)"
-    echo "  ${GREEN}sail dusk:fails${NC}    Re-run previously failed Dusk tests (Requires the laravel/dusk package)"
+    echo "  ${GREEN}fly test${NC}          Run the PHPUnit tests via the Artisan test command"
+    echo "  ${GREEN}fly phpunit ...${NC}   Run PHPUnit"
+    echo "  ${GREEN}fly pest ...${NC}      Run Pest"
+    echo "  ${GREEN}fly pint ...${NC}      Run Pint"
+    echo "  ${GREEN}fly dusk${NC}          Run the Dusk tests (Requires the laravel/dusk package)"
+    echo "  ${GREEN}fly dusk:fails${NC}    Re-run previously failed Dusk tests (Requires the laravel/dusk package)"
     echo
     echo "${YELLOW}Container CLI:${NC}"
-    echo "  ${GREEN}sail shell${NC}        Start a shell session within the application container"
-    echo "  ${GREEN}sail bash${NC}         Alias for 'sail shell'"
-    echo "  ${GREEN}sail root-shell${NC}   Start a root shell session within the application container"
-    echo "  ${GREEN}sail root-bash${NC}    Alias for 'sail root-shell'"
-    echo "  ${GREEN}sail tinker${NC}       Start a new Laravel Tinker session"
+    echo "  ${GREEN}fly shell${NC}        Start a shell session within the application container"
+    echo "  ${GREEN}fly bash${NC}         Alias for 'fly shell'"
+    echo "  ${GREEN}fly root-shell${NC}   Start a root shell session within the application container"
+    echo "  ${GREEN}fly root-bash${NC}    Alias for 'fly root-shell'"
+    echo "  ${GREEN}fly tinker${NC}       Start a new Laravel Tinker session"
     echo
     echo "${YELLOW}Sharing:${NC}"
-    echo "  ${GREEN}sail share${NC}   Share the application publicly via a temporary URL"
-    echo "  ${GREEN}sail open${NC}    Open the site in your browser"
+    echo "  ${GREEN}fly share${NC}   Share the application publicly via a temporary URL"
+    echo "  ${GREEN}fly open${NC}    Open the site in your browser"
     echo
     echo "${YELLOW}Binaries:${NC}"
-    echo "  ${GREEN}sail bin ...${NC}   Run Composer binary scripts from the vendor/bin directory"
-    echo "  ${GREEN}sail run ...${NC}   Run a command within the application container"
+    echo "  ${GREEN}fly bin ...${NC}   Run Composer binary scripts from the vendor/bin directory"
+    echo "  ${GREEN}fly run ...${NC}   Run a command within the application container"
     echo
     echo "${YELLOW}Customization:${NC}"
-    echo "  ${GREEN}sail artisan sail:publish${NC}   Publish the Sail configuration files"
-    echo "  ${GREEN}sail build --no-cache${NC}       Rebuild all of the Sail containers"
+    echo "  ${GREEN}fly artisan fly:publish${NC}   Publish the Fly configuration files"
+    echo "  ${GREEN}fly build --no-cache${NC}       Rebuild all of the Fly containers"
 
     exit 1
 }
@@ -147,17 +147,17 @@ export WWWGROUP=${WWWGROUP:-$(id -g)}
 
 export SAIL_FILES=${SAIL_FILES:-""}
 export SAIL_SHARE_DASHBOARD=${SAIL_SHARE_DASHBOARD:-4040}
-export SAIL_SHARE_SERVER_HOST=${SAIL_SHARE_SERVER_HOST:-"laravel-sail.site"}
+export SAIL_SHARE_SERVER_HOST=${SAIL_SHARE_SERVER_HOST:-"laravel-fly.site"}
 export SAIL_SHARE_SERVER_PORT=${SAIL_SHARE_SERVER_PORT:-8080}
 export SAIL_SHARE_SUBDOMAIN=${SAIL_SHARE_SUBDOMAIN:-""}
 export SAIL_SHARE_DOMAIN=${SAIL_SHARE_DOMAIN:-"$SAIL_SHARE_SERVER_HOST"}
 export SAIL_SHARE_SERVER=${SAIL_SHARE_SERVER:-""}
 
-# Function that outputs Sail is not running...
+# Function that outputs Fly is not running...
 function sail_is_not_running {
-    echo "${BOLD}Sail is not running.${NC}" >&2
+    echo "${BOLD}Fly is not running.${NC}" >&2
     echo "" >&2
-    echo "${BOLD}You may Sail using the following commands:${NC} './vendor/bin/sail up' or './vendor/bin/sail up -d'" >&2
+    echo "${BOLD}You may Fly using the following commands:${NC} './vendor/bin/fly up' or './vendor/bin/fly up -d'" >&2
 
     exit 1
 }
@@ -194,9 +194,9 @@ if [ -z "$SAIL_SKIP_CHECKS" ]; then
         exit 1
     fi
 
-    # Determine if Sail is currently up...
+    # Determine if Fly is currently up...
     if "${DOCKER_COMPOSE[@]}" ps "$APP_SERVICE" 2>&1 | grep 'Exit\|exited'; then
-        echo "${BOLD}Shutting down old Sail processes...${NC}" >&2
+        echo "${BOLD}Shutting down old Fly processes...${NC}" >&2
 
         "${DOCKER_COMPOSE[@]}" down > /dev/null 2>&1
 
@@ -213,7 +213,7 @@ if [ "$1" == "php" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" "php")
     else
@@ -227,7 +227,7 @@ elif [ "$1" == "bin" ]; then
     if [ "$EXEC" == "yes" ]; then
         CMD=$1
         shift 1
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" ./vendor/bin/"$CMD")
     else
@@ -241,7 +241,7 @@ elif [ "$1" == "run" ]; then
     if [ "$EXEC" == "yes" ]; then
         CMD=$1
         shift 1
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" "$CMD")
     else
@@ -253,7 +253,7 @@ elif [ "$1" == "docker-compose" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" "${DOCKER_COMPOSE[@]}")
     else
@@ -265,7 +265,7 @@ elif [ "$1" == "composer" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" "composer")
     else
@@ -277,7 +277,7 @@ elif [ "$1" == "artisan" ] || [ "$1" == "art" ] || [ "$1" == "a" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php artisan)
     else
@@ -289,7 +289,7 @@ elif [ "$1" == "debug" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail -e XDEBUG_TRIGGER=1)
+        ARGS+=(exec -u fly -e XDEBUG_TRIGGER=1)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php artisan)
     else
@@ -301,7 +301,7 @@ elif [ "$1" == "test" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php artisan test)
     else
@@ -313,7 +313,7 @@ elif [ "$1" == "phpunit" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php vendor/bin/phpunit)
     else
@@ -325,7 +325,7 @@ elif [ "$1" == "pest" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php vendor/bin/pest)
     else
@@ -337,7 +337,7 @@ elif [ "$1" == "pint" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php vendor/bin/pint)
     else
@@ -349,7 +349,7 @@ elif [ "$1" == "dusk" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=(-e "APP_URL=http://${APP_SERVICE}")
         ARGS+=(-e "DUSK_DRIVER_URL=http://selenium:4444/wd/hub")
@@ -363,7 +363,7 @@ elif [ "$1" == "dusk:fails" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=(-e "APP_URL=http://${APP_SERVICE}")
         ARGS+=(-e "DUSK_DRIVER_URL=http://selenium:4444/wd/hub")
@@ -377,7 +377,7 @@ elif [ "$1" == "tinker" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" php artisan tinker)
     else
@@ -389,7 +389,7 @@ elif [ "$1" == "node" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" node)
     else
@@ -401,7 +401,7 @@ elif [ "$1" == "npm" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" npm)
     else
@@ -413,7 +413,7 @@ elif [ "$1" == "npx" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" npx)
     else
@@ -425,7 +425,7 @@ elif [ "$1" == "pnpm" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" pnpm)
     else
@@ -437,7 +437,7 @@ elif [ "$1" == "pnpx" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" pnpx)
     else
@@ -449,7 +449,7 @@ elif [ "$1" == "yarn" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" yarn)
     else
@@ -461,7 +461,7 @@ elif [ "$1" == "bun" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" bun)
     else
@@ -473,7 +473,7 @@ elif [ "$1" == "bunx" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" bunx)
     else
@@ -524,7 +524,7 @@ elif [ "$1" == "shell" ] || [ "$1" == "bash" ]; then
     shift 1
 
     if [ "$EXEC" == "yes" ]; then
-        ARGS+=(exec -u sail)
+        ARGS+=(exec -u fly)
         [ ! -t 0 ] && ARGS+=(-T)
         ARGS+=("$APP_SERVICE" bash)
     else

@@ -1,16 +1,16 @@
 {
-    "name": "laravel/sail",
-    "description": "Docker files for running a basic Laravel application.",
-    "keywords": ["laravel", "docker"],
+    "name": "k-antwi/fly",
+    "description": "A code deployment package for developing and deploying Laravel applications.",
+    "keywords": ["laravel", "docker", "deployment"],
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/laravel/sail/issues",
-        "source": "https://github.com/laravel/sail"
+        "issues": "https://github.com/k-antwi/fly/issues",
+        "source": "https://github.com/k-antwi/fly"
     },
     "authors": [
         {
-            "name": "Taylor Otwell",
-            "email": "taylor@laravel.com"
+            "name": "Kwaku Antwi",
+            "email": "kwaku.antwi@kawisoft.com"
         }
     ],
     "require": {
@@ -26,17 +26,17 @@
         "phpstan/phpstan": "^1.10"
     },
     "bin": [
-        "bin/sail"
+        "bin/fly"
     ],
     "autoload": {
         "psr-4": {
-            "Laravel\\Sail\\": "src/"
+            "KAntwi\\Fly\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Laravel\\Sail\\SailServiceProvider"
+                "KAntwi\\Fly\\FlyServiceProvider"
             ]
         }
     },

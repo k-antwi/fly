@@ -36,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: 'sail'
+          path: 'fly'
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -49,36 +49,36 @@ jobs:
 
       - name: Create a new laravel application
         run: composer create-project laravel/laravel app "${{ matrix.laravel }}.x" --remove-vcs --no-interaction --prefer-dist
-
+dsfasdfa
       - name: Link Sail Repository
-        run: |
+        run: |z
           composer config minimum-stability dev
           composer config repositories.sail path ../sail
           composer require laravel/sail:* --dev -W
         working-directory: app
 
-      - name: Install Sail into App
+      - name: Install + into App
         run: |
           php artisan sail:install --php=${{ matrix.php }} --no-interaction
           php artisan sail:publish --no-interaction
         working-directory: app
 
       - name: Remove Sail
-        run: composer remove laravel/sail --dev --no-interaction -W
+        run: composer remove laravel/fly --dev --no-interaction -W
         working-directory: app
 
       - name: Start Sail Container
-        run: ../sail/bin/sail up -d --wait
+        run: ../fly/bin/fly up -d --wait
         working-directory: app
 
       - name: Run Migrations
-        run: ../sail/bin/sail artisan migrate --no-interaction
+        run: ../fly/bin/fly artisan migrate --no-interaction
         working-directory: app
 
       - name: Run Tests in Sail Container
-        run: ../sail/bin/sail test
+        run: ../fly/bin/fly test
         working-directory: app
 
       - name: Stop Sail Container
-        run: ../sail/bin/sail down
+        run: ../fly/bin/fly down
         working-directory: app
