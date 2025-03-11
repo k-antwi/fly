@@ -5,7 +5,6 @@ namespace KAntwi\Fly;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
 use KAntwi\Fly\Console\AddCommand;
-use KAntwi\Fly\Console\DeployCommand;
 use KAntwi\Fly\Console\InstallCommand;
 use KAntwi\Fly\Console\PublishCommand;
 
