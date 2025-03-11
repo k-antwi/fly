@@ -178,6 +178,8 @@ if [ "$1" == "to:vps" ]; then
           ./bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
     elif [ -f ./vendor/bin/to-vps ]; then
           ./vendor/bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
+    else
+        echo "to-vps flight is unreachable"
     fi
     exit 0
 fi
