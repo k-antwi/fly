@@ -15,6 +15,14 @@ Fly is inspired by and derived from [Vessel](https://github.com/shipping-docker/
 
 Coming soon...
 
+## Confiure A Shell Alia
+To make sure the `fly` command is always available, you may add this to your shell profile file in your home directory, such as ~/.zshrc or ~/.bashrc, and then restart your shell.
+```
+alias fly='sh $([ -f fly ] && echo fly || echo vendor/bin/fly)'
+# Refresh your profile
+source ~/.zshrc or source ~/.bashrc
+```
+
 ## License
 
 Fly is open-sourced software licensed under the [MIT license](LICENSE.md).
