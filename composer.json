@@ -26,7 +26,8 @@
         "phpstan/phpstan": "^1.10"
     },
     "bin": [
-        "bin/fly"
+        "bin/fly",
+        "bin/to-vps"
     ],
     "autoload": {
         "psr-4": {
