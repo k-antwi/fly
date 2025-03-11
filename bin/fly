@@ -177,7 +177,7 @@ if [ "$1" == "to:vps" ]; then
     if [ -f ./bin/to-vps ]; then
           ./bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
     elif [ -f ./vendor/bin/to-vps ]; then
-          ./bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
+          ./vendor/bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
     fi
     exit 0
 fi
