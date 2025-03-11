@@ -1,6 +1,50 @@
 #!/usr/bin/env bash
 
 UNAMEOUT="$(uname -s)"
+ARGS=("$@")
+
+# Variables from arguments
+COMMAND="$1"
+
+if [ "$COMMAND" == "to:vps" ]; then
+    shift 1
+    SOURCE_DIR="$1"
+    DEST_USER="$2"
+    DEST_HOST="$3"
+    DEST_DIR="$4"
+    APP_NAME="fly-app"
+    EXCLUDE_DIRS=("$@")
+    ARCHIVE_NAME="fly-archive.tar.gz"
+
+    echo "${BOLD}... about to take off.${NC}" >&2
+    echo "$SOURCE_DIR $DEST_USER@$DEST_HOST:$DEST_DIR"
+
+#    EXCLUDE_OPTIONS=""
+#    for dir in "${EXCLUDE_DIRS[@]}"; do
+#        EXCLUDE_OPTIONS+="--exclude=$dir "
+#    done
+
+    # Compress the source directory
+    tar -czf "$ARCHIVE_NAME" --exclude=.git --exclude=.github --exclude=storage --exclude=node_modules --exclude=tests --exclude=vendor -C "$SOURCE_DIR" .
+
+    # SCP command to copy files
+    scp -r "$ARCHIVE_NAME" "$DEST_USER@$DEST_HOST:$DEST_DIR"
+
+    # Check if the SCP command was successful
+    if [ $? -eq 0 ]; then
+        echo "Files copied successfully."
+        rm "$ARCHIVE_NAME"
+        ssh "$DEST_USER@$DEST_HOST" "mkdir -p $DEST_DIR/$APP_NAME && tar -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_NAME && rm $DEST_DIR/$ARCHIVE_NAME"
+        exit 1;
+    else
+        echo "Error occurred while copying files."
+        # Clean up the archive file
+        rm "$ARCHIVE_NAME"
+    fi
+
+    exit 1;
+fi
+
 
 # Verify operating system is supported...
 case "${UNAMEOUT}" in
@@ -172,37 +216,6 @@ if [ "$#" -ne 4 ]; then
     exit 1
 fi
 
-# Variables from arguments
-COMMAND="$1"
-SOURCE_DIR="$2"
-DEST_USER="$3"
-DEST_HOST="$4"
-DEST_DIR="$5"
-ARCHIVE_NAME="fly-archive.tar.gz"
-
-if [ "$COMMAND" == "deploy" ]; then
-    echo "${BOLD}... about to take off.${NC}" >&2
-    echo "$SOURCE_DIR $DEST_USER@$DEST_HOST:$DEST_DIR"
-
-
-    # Compress the source directory
-    tar -czf "$ARCHIVE_NAME" -C "$SOURCE_DIR" ../.
-
-    # SCP command to copy files
-    scp -r "$SOURCE_DIR" "$DEST_USER@$DEST_HOST:$DEST_DIR"
-
-    # Check if the SCP command was successful
-    if [ $? -eq 0 ]; then
-        echo "Files copied successfully."
-        ssh "$DEST_USER@$DEST_HOST" "tar -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR && rm $DEST_DIR/$ARCHIVE_NAME"
-    else
-        echo "Error occurred while copying files."
-        # Clean up the archive file
-        rm "$ARCHIVE_NAME"
-    fi
-
-    exit 1;
-fi
 
 # Define Docker Compose command prefix...
 if docker compose &> /dev/null; then
