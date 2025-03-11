@@ -33,7 +33,6 @@ class FlyServiceProvider extends ServiceProvider implements DeferrableProvider
                 InstallCommand::class,
                 AddCommand::class,
                 PublishCommand::class,
-                DeployCommand::class,
             ]);
         }
     }
