@@ -44,6 +44,9 @@ function display_help {
     echo "  ${GREEN}fly restart${NC}   Restart the application"
     echo "  ${GREEN}fly ps${NC}        Display the status of all containers"
     echo
+    echo "${YELLOW}Deployment Commands:${NC}"
+    echo "  ${GREEN}fly deploy${NC}        Deploy the application"
+    echo
     echo "${YELLOW}Artisan Commands:${NC}"
     echo "  ${GREEN}fly artisan ...${NC}          Run an Artisan command"
     echo "  ${GREEN}fly artisan queue:work${NC}"
@@ -161,6 +164,45 @@ function fly_is_not_running {
 
     exit 1
 }
+
+# Deploy App Commands
+# Check if the correct number of arguments is provided
+if [ "$#" -ne 4 ]; then
+    echo "Usage: $0 <source_dir> <dest_user> <dest_host> <dest_dir>"
+    exit 1
+fi
+
+# Variables from arguments
+COMMAND="$1"
+SOURCE_DIR="$2"
+DEST_USER="$3"
+DEST_HOST="$4"
+DEST_DIR="$5"
+ARCHIVE_NAME="fly-archive.tar.gz"
+
+if [ "$COMMAND" == "deploy" ]; then
+    echo "${BOLD}... about to take off.${NC}" >&2
+    echo "$SOURCE_DIR $DEST_USER@$DEST_HOST:$DEST_DIR"
+
+
+    # Compress the source directory
+    tar -czf "$ARCHIVE_NAME" -C "$SOURCE_DIR" ../.
+
+    # SCP command to copy files
+    scp -r "$SOURCE_DIR" "$DEST_USER@$DEST_HOST:$DEST_DIR"
+
+    # Check if the SCP command was successful
+    if [ $? -eq 0 ]; then
+        echo "Files copied successfully."
+        ssh "$DEST_USER@$DEST_HOST" "tar -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR && rm $DEST_DIR/$ARCHIVE_NAME"
+    else
+        echo "Error occurred while copying files."
+        # Clean up the archive file
+        rm "$ARCHIVE_NAME"
+    fi
+
+    exit 1;
+fi
 
 # Define Docker Compose command prefix...
 if docker compose &> /dev/null; then
