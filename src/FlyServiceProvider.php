@@ -54,6 +54,10 @@ class FlyServiceProvider extends ServiceProvider implements DeferrableProvider
             ], ['fly', 'fly-bin']);
 
             $this->publishes([
+                __DIR__ . '/../bin/to-vps' => $this->app->basePath('fly'),
+            ], ['fly', 'fly-to-vps']);
+
+            $this->publishes([
                 __DIR__ . '/../database' => $this->app->basePath('docker'),
             ], ['fly', 'fly-database']);
         }
