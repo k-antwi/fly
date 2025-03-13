@@ -20,7 +20,8 @@ class InstallCommand extends Command
     protected $signature = 'fly:install
                 {--with= : The services that should be included in the installation}
                 {--devcontainer : Create a .devcontainer configuration directory}
-                {--php=8.4 : The PHP version that should be used}';
+                {--php=8.4 : The PHP version that should be used}
+                {--live : Install the services on the remote server}';
 
     /**
      * The console command description.
@@ -36,6 +37,10 @@ class InstallCommand extends Command
      */
     public function handle()
     {
+        if ($this->option('live')){
+            return $this->installRemotely();
+        }
+
         if ($this->option('with')) {
             $services = $this->option('with') == 'none' ? [] : explode(',', $this->option('with'));
         } elseif ($this->option('no-interaction')) {
@@ -74,5 +79,10 @@ class InstallCommand extends Command
         }
 
         $this->output->writeln('');
+    }
+
+    private function installRemotely()
+    {
+
     }
 }

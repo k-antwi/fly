@@ -142,10 +142,12 @@ trait InteractsWithDockerComposeServices
         if (in_array('mysql', $services)) {
             $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=mysql', $environment);
             $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=mysql", $environment);
-        }elseif (in_array('pgsql', $services)) {
+
+        } elseif (in_array('pgsql', $services)) {
             $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=pgsql', $environment);
             $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=pgsql", $environment);
             $environment = str_replace('DB_PORT=3306', "DB_PORT=5432", $environment);
+
         } elseif (in_array('mariadb', $services)) {
             if ($this->laravel->config->has('database.connections.mariadb')) {
                 $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=mariadb', $environment);
@@ -300,5 +302,59 @@ trait InteractsWithDockerComposeServices
         return $process->run(function ($type, $line) {
             $this->output->write('    '.$line);
         });
+    }
+
+    protected function buildDockerComposeForProduction(array $services)
+    {
+        $composePath = base_path('docker-compose-live.yml');
+
+        $compose = file_exists($composePath)
+            ? Yaml::parseFile($composePath)
+            : Yaml::parse(file_get_contents(__DIR__ . '/../../../stubs/docker-compose.stub'));
+
+        // Prepare the installation of the "mariadb-client" package if the MariaDB service is used...
+        if (in_array('mariadb', $services)) {
+            $compose['services']['laravel.fly']['build']['args']['MYSQL_CLIENT'] = 'mariadb-client';
+        }
+
+        // Adds the new services as dependencies of the laravel.fly service...
+        if (! array_key_exists('laravel.fly', $compose['services'])) {
+            $this->warn('Couldn\'t find the laravel.fly service. Make sure you add ['.implode(',', $services).'] to the depends_on config.');
+        } else {
+            $compose['services']['laravel.fly']['depends_on'] = collect($compose['services']['laravel.fly']['depends_on'] ?? [])
+                ->merge($services)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        // Add the services to the docker-compose.yml...
+        collect($services)
+            ->filter(function ($service) use ($compose) {
+                return ! array_key_exists($service, $compose['services'] ?? []);
+            })->each(function ($service) use (&$compose) {
+                $compose['services'][$service] = Yaml::parseFile(__DIR__ . "/../../../stubs/{$service}.stub")[$service];
+            });
+
+        // Merge volumes...
+        collect($services)
+            ->filter(function ($service) {
+                return in_array($service, ['mysql', 'pgsql', 'mariadb', 'mongodb', 'redis', 'valkey', 'meilisearch', 'typesense', 'minio']);
+            })->filter(function ($service) use ($compose) {
+                return ! array_key_exists($service, $compose['volumes'] ?? []);
+            })->each(function ($service) use (&$compose) {
+                $compose['volumes']["fly-{$service}"] = ['driver' => 'local'];
+            });
+
+        // If the list of volumes is empty, we can remove it...
+        if (empty($compose['volumes'])) {
+            unset($compose['volumes']);
+        }
+
+        $yaml = Yaml::dump($compose, Yaml::DUMP_OBJECT_AS_MAP);
+
+        $yaml = str_replace('{{PHP_VERSION}}', $this->hasOption('php') ? $this->option('php') : '8.4', $yaml);
+
+        file_put_contents($this->laravel->basePath('docker-compose.yml'), $yaml);
     }
 }
