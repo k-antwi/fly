@@ -3,3 +3,4 @@ composer.lock
 .idea/
 art/.DS_Store
 .env
+docker-compose.yml

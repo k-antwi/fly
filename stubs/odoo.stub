@@ -22,8 +22,8 @@ services:
             - db
         restart: unless-stopped
         ports:
-            - '${APP_PORT:-8069}:8069'
-            - '${LONG_POLLING:-8072}:8072'
+            - '${ODOO_APP_PORT:-8069}:8069'
+            - '${ODOO_LONG_POLLING:-8072}:8072'
         volumes:
             - ./app/config:/etc/odoo
             - ./app/addons:/home/odoo/addons
