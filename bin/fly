@@ -160,83 +160,12 @@ if [ -n "$FLY_SSH_USERNAME" ]; then
     FULL_SSH_USERNAME="$FLY_SSH_USERNAME"
 fi
 
-# Function to check if a port is in use
-is_port_in_use() {
-    local port=$1
-    if netstat -tuln | grep -q ":$port "; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Function to find the next available port starting from a given port
-find_next_available_port() {
-    local start_port=$1
-    local port=$start_port
-
-    while is_port_in_use $port; do
-        port=$((port + 1))
-    done
-
-    echo $port
-}
 
 # Define environment variables...
 export APP_NAME=${APP_NAME:-"fly-app"}
 export APP_SERVICE=${APP_SERVICE:-"laravel.fly"}
 export WWWUSER=${WWWUSER:-$UID}
 export WWWGROUP=${WWWGROUP:-$(id -g)}
-
-# Automatically assign the next available port
-app_port=$(find_next_available_port "$APP_PORT")
-export APP_PORT=$app_port
-
-mysql_port=$(find_next_available_port "${FORWARD_DB_PORT:-3306}")
-export FORWARD_DB_PORT=$mysql_port
-
-redis_port=$(find_next_available_port "${FORWARD_REDIS_PORT:-6379}")
-export FORWARD_REDIS_PORT=$redis_port
-
-valkey_port=$(find_next_available_port "${FORWARD_VALKEY_PORT:-6379}")
-export FORWARD_VALKEY_PORT=${valkey_port}
-
-mongodb_port=$(find_next_available_port "${FORWARD_MONGODB_PORT:-27017}")
-export FORWARD_MONGODB_PORT=${mongodb_port}
-
-pgsql_port=$(find_next_available_port "${FORWARD_PGSQL_PORT:-5432}")
-export FORWARD_PGSQL_PORT=${pgsql_port}
-
-vite_port=$(find_next_available_port "${VITE_PORT:-5173}")
-export VITE_PORT=${vite_port}
-
-pusher_port=$(find_next_available_port "${PUSHER_PORT:-6001}")
-export PUSHER_PORT=${pusher_port}
-
-pusher_metrics_port=$(find_next_available_port "${PUSHER_METRICS_PORT:-9601}")
-export PUSHER_METRICS_PORT=${pusher_metrics_port}
-
-typsense_port=$(find_next_available_port "${FORWARD_TYPESENSE_PORT:-8108}")
-export FORWARD_TYPESENSE_PORT=${typsense_port}
-
-odoo_port=$(find_next_available_port "${ODOO_APP_PORT:-8069}")
-export ODOO_APP_PORT=${odoo_port}
-
-odoo_long_port=$(find_next_available_port "${ODOO_LONG_POLLING:-8072}")
-export ODOO_LONG_POLLING=${odoo_long_port}
-
-minio_port=$(find_next_available_port "${FORWARD_MINIO_PORT:-9000}")
-export FORWARD_MINIO_PORT=${minio_port}
-
-minio_console_port=$(find_next_available_port "${FORWARD_MINIO_CONSOLE_PORT:-8900}")
-export FORWARD_MINIO_CONSOLE_PORT=${minio_console_port}
-
-memcached_port=$(find_next_available_port "${FORWARD_MEMCACHED_PORT:-11211}")
-export FORWARD_MEMCACHED_PORT=${memcached_port}
-
-meilisearch_port=$(find_next_available_port "${FORWARD_MEILISEARCH_PORT:-7700}")
-export FORWARD_MEILISEARCH_PORT=${meilisearch_port}
-
 
 
 export FLY_FILES=${FLY_FILES:-""}
@@ -724,7 +653,88 @@ elif [ "$1" == "open" ]; then
     fi
 fi
 
+# Function to check if a port is in use
+is_port_in_use() {
+    local port=$1
+    local ip="127.0.0.1"
 
+    if netstat -tuln | grep -q "$ip:$port"; then
+        echo "Port $port is available." >&2
+        return 0
+    else
+        echo "Port $port is in use." >&2
+        return 1
+    fi
+}
+
+# Function to list all available ports
+list_available_ports() {
+    netstat -tuln | awk 'NR>2 {print $4}' | awk -F: '{print $NF}' | sort -n | uniq
+}
+
+function get_random_port() {
+    LOW_BOUND=49152
+    RANGE=16384
+    while true; do
+        CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
+        (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo $CANDIDATE
+            break
+        fi
+    done
+}
+
+# Function to find the next available port starting from a given port
+find_next_available_port() {
+    local start_port=$1
+    local port=$start_port
+
+    while (is_port_in_use "$port"); do
+        port=$((port + 1))
+    done
+
+    echo $port
+}
+
+
+# Automatically assign the next available port
+#app_port=$(find_next_available_port "$APP_PORT")
+#mysql_port=$(find_next_available_port "${FORWARD_DB_PORT:-3306}")
+#redis_port=$(find_next_available_port "${FORWARD_REDIS_PORT:-6379}")
+#valkey_port=$(find_next_available_port "${FORWARD_VALKEY_PORT:-6379}")
+#mongodb_port=$(find_next_available_port "${FORWARD_MONGODB_PORT:-27017}")
+#pgsql_port=$(find_next_available_port "${FORWARD_PGSQL_PORT:-5432}")
+#vite_port=$(find_next_available_port "${VITE_PORT:-5173}")
+#pusher_port=$(find_next_available_port "${PUSHER_PORT:-6001}")
+#pusher_metrics_port=$(find_next_available_port "${PUSHER_METRICS_PORT:-9601}")
+#typsense_port=$(find_next_available_port "${FORWARD_TYPESENSE_PORT:-8108}")
+#odoo_long_port=$(find_next_available_port "${ODOO_LONG_POLLING:-8072}")
+#odoo_port=$(find_next_available_port "${ODOO_APP_PORT:-8069}")
+#minio_port=$(find_next_available_port "${FORWARD_MINIO_PORT:-9000}")
+#minio_console_port=$(find_next_available_port "${FORWARD_MINIO_CONSOLE_PORT:-8900}")
+#memcached_port=$(find_next_available_port "${FORWARD_MEMCACHED_PORT:-11211}")
+#meilisearch_port=$(find_next_available_port "${FORWARD_MEILISEARCH_PORT:-7700}")
+
+
+export APP_PORT=$(get_random_port)
+export FORWARD_DB_PORT=$(get_random_port)
+export FORWARD_REDIS_PORT=$(get_random_port)
+export FORWARD_VALKEY_PORT=$(get_random_port)
+export FORWARD_MONGODB_PORT=$(get_random_port)
+export FORWARD_PGSQL_PORT=$(get_random_port)
+export VITE_PORT=$(get_random_port)
+export PUSHER_PORT=$(get_random_port)
+export PUSHER_METRICS_PORT=$(get_random_port)
+export FORWARD_TYPESENSE_PORT=$(get_random_port)
+export ODOO_APP_PORT=$(get_random_port)
+export ODOO_LONG_POLLING=$(get_random_port)
+export FORWARD_MINIO_PORT=$(get_random_port)
+export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+export FORWARD_MEMCACHED_PORT=$(get_random_port)
+export FORWARD_MEILISEARCH_PORT=$(get_random_port)
+
+echo $FORWARD_VALKEY_PORT
 # Deploy to a VPS server
 if [ "$1" == "to:vps" ]; then
     if [ "$FULL_SSH_USERNAME" == '' ]; then

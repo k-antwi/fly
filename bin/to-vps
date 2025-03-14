@@ -56,7 +56,9 @@ fi
 
 # Check if the SCP command was successful
 if [ $? -eq 0 ]; then
-    rm "$ARCHIVE_NAME"
+    rm "$ARCHIVE_NAME" # remove the archive file locally
+
+    echo "==>>> Decompressing files ..."
     ssh "$FULL_SSH_USERNAME" "mkdir -p $DEST_DIR/$APP_ROOT && \
       tar --warning=no-unknown-keyword -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_ROOT && \
       rm $DEST_DIR/$ARCHIVE_NAME"
