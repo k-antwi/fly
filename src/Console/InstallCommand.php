@@ -38,7 +38,8 @@ class InstallCommand extends Command
     public function handle()
     {
         if ($this->option('live')){
-            return $this->installRemotely();
+            $this->installRemotely();
+            return 1;
         }
 
         if ($this->option('with')) {
@@ -83,6 +84,38 @@ class InstallCommand extends Command
 
     private function installRemotely()
     {
+        if ($this->option('with')) {
+            $services = $this->option('with') == 'none' ? [] : explode(',', $this->option('with'));
+        } elseif ($this->option('no-interaction')) {
+            $services = $this->defaultServices;
+        } else {
+            $services = $this->gatherServicesInteractively();
+        }
 
+        if ($invalidServices = array_diff($services, $this->services)) {
+            $this->components->error('Invalid services ['.implode(',', $invalidServices).'].');
+
+            return 1;
+        }
+
+        $this->buildDockerComposeForProduction($services);
+        $this->prepareEnvForProduction($services);
+
+        $this->prepareInstallation($services);
+
+        $this->output->writeln('');
+        $this->components->info('Fly scaffolding installed successfully. You may run your Docker containers using Fly\'s "up" command.');
+
+        $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/fly up</>');
+
+        if (in_array('mysql', $services) ||
+            in_array('mariadb', $services) ||
+            in_array('pgsql', $services)) {
+            $this->components->warn('A database service was installed. Run "artisan migrate" to prepare your database:');
+
+            $this->output->writeln('<fg=gray>➜</> <options=bold>./vendor/bin/fly artisan migrate</>');
+        }
+
+        $this->output->writeln('');
     }
 }

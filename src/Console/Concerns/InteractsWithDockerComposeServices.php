@@ -210,6 +210,97 @@ trait InteractsWithDockerComposeServices
         file_put_contents($this->laravel->basePath('.env'), $environment);
     }
 
+    protected function prepareEnvForProduction(array $services)
+    {
+        $environment = file_get_contents($this->laravel->basePath('.env'));
+
+        if (in_array('mysql', $services) ||
+            in_array('mariadb', $services) ||
+            in_array('pgsql', $services)) {
+            $defaults = [
+                '# DB_HOST=127.0.0.1',
+                '# DB_PORT=3306',
+                '# DB_DATABASE=laravel',
+                '# DB_USERNAME=root',
+                '# DB_PASSWORD=',
+            ];
+
+            foreach ($defaults as $default) {
+                $environment = str_replace($default, substr($default, 2), $environment);
+            }
+        }
+
+        if (in_array('mysql', $services)) {
+            $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=mysql', $environment);
+            $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=mysql", $environment);
+
+        } elseif (in_array('pgsql', $services)) {
+            $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=pgsql', $environment);
+            $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=pgsql", $environment);
+            $environment = str_replace('DB_PORT=3306', "DB_PORT=5432", $environment);
+
+        } elseif (in_array('mariadb', $services)) {
+            if ($this->laravel->config->has('database.connections.mariadb')) {
+                $environment = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=mariadb', $environment);
+            }
+
+            $environment = str_replace('DB_HOST=127.0.0.1', "DB_HOST=mariadb", $environment);
+        }
+
+        $environment = str_replace('DB_USERNAME=root', "DB_USERNAME=fly", $environment);
+        $environment = preg_replace("/DB_PASSWORD=(.*)/", "DB_PASSWORD=password", $environment);
+
+        if (in_array('memcached', $services)) {
+            $environment = str_replace('MEMCACHED_HOST=127.0.0.1', 'MEMCACHED_HOST=memcached', $environment);
+        }
+
+        if (in_array('redis', $services)) {
+            $environment = str_replace('REDIS_HOST=127.0.0.1', 'REDIS_HOST=redis', $environment);
+        }
+
+        if (in_array('valkey',$services)){
+            $environment = str_replace('REDIS_HOST=127.0.0.1', 'REDIS_HOST=valkey', $environment);
+        }
+
+        if (in_array('mongodb', $services)) {
+            $environment .= "\nMONGODB_URI=mongodb://mongodb:27017";
+            $environment .= "\nMONGODB_DATABASE=laravel";
+        }
+
+        if (in_array('meilisearch', $services)) {
+            $environment .= "\nSCOUT_DRIVER=meilisearch";
+            $environment .= "\nMEILISEARCH_HOST=http://meilisearch:7700\n";
+            $environment .= "\nMEILISEARCH_NO_ANALYTICS=false\n";
+        }
+
+        if (in_array('typesense', $services)) {
+            $environment .= "\nSCOUT_DRIVER=typesense";
+            $environment .= "\nTYPESENSE_HOST=typesense";
+            $environment .= "\nTYPESENSE_PORT=8108";
+            $environment .= "\nTYPESENSE_PROTOCOL=http";
+            $environment .= "\nTYPESENSE_API_KEY=xyz\n";
+        }
+
+        if (in_array('soketi', $services)) {
+            $environment = preg_replace("/^BROADCAST_DRIVER=(.*)/m", "BROADCAST_DRIVER=pusher", $environment);
+            $environment = preg_replace("/^PUSHER_APP_ID=(.*)/m", "PUSHER_APP_ID=app-id", $environment);
+            $environment = preg_replace("/^PUSHER_APP_KEY=(.*)/m", "PUSHER_APP_KEY=app-key", $environment);
+            $environment = preg_replace("/^PUSHER_APP_SECRET=(.*)/m", "PUSHER_APP_SECRET=app-secret", $environment);
+            $environment = preg_replace("/^PUSHER_HOST=(.*)/m", "PUSHER_HOST=soketi", $environment);
+            $environment = preg_replace("/^PUSHER_PORT=(.*)/m", "PUSHER_PORT=6001", $environment);
+            $environment = preg_replace("/^PUSHER_SCHEME=(.*)/m", "PUSHER_SCHEME=http", $environment);
+            $environment = preg_replace("/^VITE_PUSHER_HOST=(.*)/m", "VITE_PUSHER_HOST=localhost", $environment);
+        }
+
+        if (in_array('mailpit', $services)) {
+            $environment = preg_replace("/^MAIL_MAILER=(.*)/m", "MAIL_MAILER=smtp", $environment);
+            $environment = preg_replace("/^MAIL_HOST=(.*)/m", "MAIL_HOST=mailpit", $environment);
+            $environment = preg_replace("/^MAIL_PORT=(.*)/m", "MAIL_PORT=1025", $environment);
+        }
+
+        file_put_contents($this->laravel->basePath('.env'), $environment);
+    }
+
     /**
      * Configure PHPUnit to use the dedicated testing database.
      *
@@ -304,6 +395,29 @@ trait InteractsWithDockerComposeServices
         });
     }
 
+    protected function prepareProductionInstallation($services)
+    {
+
+        //@todo
+        // ship the code and cd into it
+        // ssh into remote server
+        // check for docker
+        // Ensure docker is installed...
+        if ($this->runCommands(['docker info > /dev/null 2>&1']) !== 0) {
+            return;
+        }
+
+        if (count($services) > 0) {
+            $this->runCommands([
+                './vendor/bin/fly pull '.implode(' ', $services),
+            ]);
+        }
+
+        $this->runCommands([
+            './vendor/bin/fly build',
+        ]);
+    }
+
     protected function buildDockerComposeForProduction(array $services)
     {
         $composePath = base_path('docker-compose-live.yml');
@@ -355,6 +469,6 @@ trait InteractsWithDockerComposeServices
 
         $yaml = str_replace('{{PHP_VERSION}}', $this->hasOption('php') ? $this->option('php') : '8.4', $yaml);
 
-        file_put_contents($this->laravel->basePath('docker-compose.yml'), $yaml);
+        file_put_contents($this->laravel->basePath('docker-compose-live.yml'), $yaml);
     }
 }

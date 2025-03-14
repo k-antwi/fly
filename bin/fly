@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -o errexit
+
 UNAMEOUT="$(uname -s)"
 
 export LANG=en_US.UTF-8
@@ -145,6 +147,7 @@ elif [ -f ./.env ]; then
 fi
 
 # Define environment variables...
+export APP_NAME=${APP_NAMET:-"fly-app"}
 export APP_PORT=${APP_PORT:-80}
 export APP_SERVICE=${APP_SERVICE:-"laravel.fly"}
 export DB_PORT=${DB_PORT:-3306}
@@ -172,15 +175,15 @@ function fly_is_not_running {
 if [ "$1" == "to:vps" ]; then
     shift 1
     SOURCE_DIR="$1"
-    DEST_USER="$2"
-    DEST_HOST="$3"
-    DEST_DIR="$4"
+    FULL_SSH_USERNAME="$2"
+    DEST_DIR="$3"
+    PARSE_SSH_KEY="$4"
 
     # Call the to-vps script
     if [ -f ./bin/to-vps ]; then
-          ./bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
+          ./bin/to-vps "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR" "$PARSE_SSH_KEY"
     elif [ -f ./vendor/bin/to-vps ]; then
-          ./vendor/bin/to-vps "${SOURCE_DIR}" "${DEST_USER}" "${DEST_HOST}" "${DEST_DIR}"
+          ./vendor/bin/to-vps "$SOURCE_DIR" "$FULL_SSH_USERNAME" "$DEST_DIR" "$PARSE_SSH_KEY"
     else
         echo "to-vps flight is unreachable"
     fi
@@ -650,6 +653,26 @@ elif [ "$1" == "open" ]; then
     else
         fly_is_not_running
     fi
+fi
+
+
+
+# deploy code to vps,
+# check if docker is installed,
+# run docker compose up,
+
+if [ "$1" == "up:vps" ]; then
+    shift 1
+    FULL_SSH_USERNAME="$1"
+    DEST_DIR="$2"
+    PARSE_SSH_KEY="$3"
+
+    # to pull image from gitlab registry
+    #  docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
+    #  docker pull $IMAGE_NAME:$IMAGE_TAG &&
+    ssh -o StrictHostKeyChecking=no "$PARSE_SSH_KEY" "$FULL_SSH_USERNAME" "
+        cd $DEST_DIR/$APP_NAME &&
+        docker compose up -d"
 fi
 
 # Run Docker Compose with the defined arguments...

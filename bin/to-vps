@@ -6,29 +6,34 @@ ARGS=("$@")
 
 # Check if the correct number of arguments is provided
 if [ "$#" -ne 4 ]; then
-    echo "Usage: $0 <source_dir> <dest_user> <dest_host> <dest_dir>"
+    echo "Usage: $0 <source_dir> <dest_username> <dest_dir>"
     exit 1
 fi
 
 # Variables from arguments
 SOURCE_DIR="$1"
-DEST_USER="$2"
-DEST_HOST="$3"
-DEST_DIR="$4"
-APP_NAME="fly-app"
+FULL_SSH_USERNAME="$2"
+DEST_DIR="$3"
+PARSE_SSH_KEY="$4"
+
+# split the full ssh username into user and host
+IFS='@' read -r DEST_USER DEST_HOST <<< "$FULL_SSH_USERNAME"
+
+#APP_NAME="fly-app"
 EXCLUDE_DIRS=(".git" ".github" "storage" "node_modules" "tests" "vendor")
-ARCHIVE_NAME="fly-archive.tar.gz"
+ARCHIVE_NAME="$APP_NAME.tar.gz"
 
 echo "${BOLD}... about to take off.${NC}" >&2
-echo "$SOURCE_DIR $DEST_USER@$DEST_HOST:$DEST_DIR"
+echo "$SOURCE_DIR $FULL_SSH_USERNAME:$DEST_DIR"
 
-    EXCLUDE_OPTIONS=""
-    for dir in "${EXCLUDE_DIRS[@]}"; do
-        EXCLUDE_OPTIONS+="--exclude=$dir "
-    done
+# Build the exclude options
+EXCLUDE_OPTIONS=""
+for dir in "${EXCLUDE_DIRS[@]}"; do
+    EXCLUDE_OPTIONS+="--exclude=$dir "
+done
 
 # Compress the source directory
-tar -czf "$ARCHIVE_NAME" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
+tar -czf "$ARCHIVE_NAME" "$PARSE_SSH_KEY" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
 
 # SCP command to copy files
 scp -r "$ARCHIVE_NAME" "$DEST_USER@$DEST_HOST:$DEST_DIR"
@@ -39,7 +44,7 @@ scp -r "$ARCHIVE_NAME" "$DEST_USER@$DEST_HOST:$DEST_DIR"
 if [ $? -eq 0 ]; then
     echo "Files copied successfully."
     rm "$ARCHIVE_NAME"
-    ssh "$DEST_USER@$DEST_HOST" "mkdir -p $DEST_DIR/$APP_NAME && tar --warning=no-unknown-keyword -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_NAME && rm $DEST_DIR/$ARCHIVE_NAME"
+    ssh "$FULL_SSH_USERNAME" "mkdir -p $DEST_DIR/$APP_NAME && tar --warning=no-unknown-keyword -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_NAME && rm $DEST_DIR/$ARCHIVE_NAME"
     exit 0;
 else
     echo "Error occurred while copying files."
