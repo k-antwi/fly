@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 
 UNAMEOUT="$(uname -s)"
-ARGS=("$@")
 
+# Source the ".env" file so Laravel's environment variables are available...
+if [ -n "$APP_ENV" ] && [ -f ./.env."$APP_ENV" ]; then
+  source ./.env."$APP_ENV";
+elif [ -f ./.env ]; then
+  source ./.env;
+fi
+
+echo " ===== taking off ===>>>>" >&2
 
 # Check if the correct number of arguments is provided
-if [ "$#" -ne 4 ]; then
+if [ "$#" -ne 3 ]; then
     echo "Usage: $0 <source_dir> <dest_username> <dest_dir>"
     exit 1
 fi
@@ -14,42 +21,50 @@ fi
 SOURCE_DIR="$1"
 FULL_SSH_USERNAME="$2"
 DEST_DIR="$3"
-PARSE_SSH_KEY="$4"
 
 # split the full ssh username into user and host
-IFS='@' read -r DEST_USER DEST_HOST <<< "$FULL_SSH_USERNAME"
+#IFS='@' read -r DEST_USER DEST_HOST <<< "$FULL_SSH_USERNAME"
 
-#APP_NAME="fly-app"
-EXCLUDE_DIRS=(".git" ".github" "storage" "node_modules" "tests" "vendor")
-ARCHIVE_NAME="$APP_NAME.tar.gz"
+EXCLUDE_DIRS=("storage" "node_modules" "tests" "vendor")
+APP_ROOT=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')
+ARCHIVE_NAME="$APP_ROOT.tar.gz"
 
-echo "${BOLD}... about to take off.${NC}" >&2
-echo "$SOURCE_DIR $FULL_SSH_USERNAME:$DEST_DIR"
+echo "to >>> $SOURCE_DIR $FULL_SSH_USERNAME:$DEST_DIR"
 
 # Build the exclude options
 EXCLUDE_OPTIONS=""
-#for dir in "${EXCLUDE_DIRS[@]}"; do
-#    EXCLUDE_OPTIONS+="--exclude=$dir "
-#done
+for dir in "${EXCLUDE_DIRS[@]}"; do
+    EXCLUDE_OPTIONS+="--exclude=$dir "
+done
+
+if [ -f ".git" ]; then
+    EXCLUDE_OPTIONS+="--exclude=.git "
+elif [ -d ".github" ]; then
+    EXCLUDE_OPTIONS+="--exclude=.github "
+fi
 
 # Compress the source directory
 tar -czf "$ARCHIVE_NAME" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
 
-# SCP command to copy files
-scp -r "$ARCHIVE_NAME" "$DEST_USER@$DEST_HOST:$DEST_DIR"
-
-# Compress the source directory
+if [ -n "$FLY_SSH_KEY" ]; then
+  # SCP command to copy files
+    scp -i "$FLY_SSH_KEY" -r "$ARCHIVE_NAME" "$FULL_SSH_USERNAME:$DEST_DIR"
+else
+  scp -r "$ARCHIVE_NAME" "$FULL_SSH_USERNAME:$DEST_DIR"
+fi
 
 # Check if the SCP command was successful
 if [ $? -eq 0 ]; then
-    echo "Files copied successfully."
     rm "$ARCHIVE_NAME"
-    ssh "$FULL_SSH_USERNAME" "mkdir -p $DEST_DIR/$APP_NAME && tar --warning=no-unknown-keyword -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_NAME && rm $DEST_DIR/$ARCHIVE_NAME"
-    exit 0;
+    ssh "$FULL_SSH_USERNAME" "mkdir -p $DEST_DIR/$APP_ROOT && \
+      tar --warning=no-unknown-keyword -xzf $DEST_DIR/$ARCHIVE_NAME -C $DEST_DIR/$APP_ROOT && \
+      rm $DEST_DIR/$ARCHIVE_NAME"
+    echo "Files copied successfully."
 else
     echo "Error occurred while copying files."
     # Clean up the archive file
     rm "$ARCHIVE_NAME"
 fi
 
+echo " <<<<===== landed safely! ==="
 exit 0;

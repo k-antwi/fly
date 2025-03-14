@@ -33,6 +33,16 @@ if test -t 1; then
     fi
 fi
 
+# Function to check if a port is in use
+is_port_in_use() {
+    local port=$1
+    if netstat -tuln | grep -q ":$port "; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Function that prints the available commands...
 function display_help {
     echo "Fly"
@@ -146,8 +156,12 @@ elif [ -f ./.env ]; then
   source ./.env;
 fi
 
+if [ -n "$FLY_SSH_USERNAME" ]; then
+    FULL_SSH_USERNAME="$FLY_SSH_USERNAME"
+fi
+
 # Define environment variables...
-export APP_NAME=${APP_NAMET:-"fly-app"}
+export APP_NAME=${APP_NAME:-"fly-app"}
 export APP_PORT=${APP_PORT:-80}
 export APP_SERVICE=${APP_SERVICE:-"laravel.fly"}
 export DB_PORT=${DB_PORT:-3306}
@@ -162,6 +176,9 @@ export FLY_SHARE_SUBDOMAIN=${FLY_SHARE_SUBDOMAIN:-""}
 export FLY_SHARE_DOMAIN=${FLY_SHARE_DOMAIN:-"$FLY_SHARE_SERVER_HOST"}
 export FLY_SHARE_SERVER=${FLY_SHARE_SERVER:-""}
 
+APP_ROOT=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')
+
+
 # Function that outputs Fly is not running...
 function fly_is_not_running {
     echo "${BOLD}Fly is not running.${NC}" >&2
@@ -170,25 +187,6 @@ function fly_is_not_running {
 
     exit 1
 }
-
-# Deploy to a VPS server
-if [ "$1" == "to:vps" ]; then
-    shift 1
-    SOURCE_DIR="$1"
-    FULL_SSH_USERNAME="$2"
-    DEST_DIR="$3"
-    PARSE_SSH_KEY="$4"
-
-    # Call the to-vps script
-    if [ -f ./bin/to-vps ]; then
-          ./bin/to-vps "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR" "$PARSE_SSH_KEY"
-    elif [ -f ./vendor/bin/to-vps ]; then
-          ./vendor/bin/to-vps "$SOURCE_DIR" "$FULL_SSH_USERNAME" "$DEST_DIR" "$PARSE_SSH_KEY"
-    else
-        echo "to-vps flight is unreachable"
-    fi
-    exit 0
-fi
 
 # Define Docker Compose command prefix...
 if docker compose &> /dev/null; then
@@ -657,24 +655,59 @@ fi
 
 
 
-# deploy code to vps,
-# check if docker is installed,
-# run docker compose up,
+# Deploy to a VPS server
+if [ "$1" == "to:vps" ]; then
+    if [ "$FULL_SSH_USERNAME" == '' ]; then
+        echo "SSH username is required. Please set the FLY_SSH_USERNAME environment variable." >&2
+        exit 1
+    fi
 
-if [ "$1" == "up:vps" ]; then
     shift 1
-    FULL_SSH_USERNAME="$1"
-    DEST_DIR="$2"
-    PARSE_SSH_KEY="$3"
-    DEFAULT_COMMAND="up -d"
+    SOURCE_DIR="$1"
+    DEST_DIR="$FLY_REMOTE_APP_DIR"
 
-    shift 2
-    ARGS=("${@:-$DEFAULT_COMMAND}")
+    # Call the to-vps script
+    if [ -f ./bin/to-vps ]; then
+          ./bin/to-vps "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR"
+    elif [ -f ./vendor/bin/to-vps ]; then
+          ./vendor/bin/to-vps "$SOURCE_DIR" "$FULL_SSH_USERNAME" "$DEST_DIR"
+    else
+        echo "to-vps flight is unreachable"
+    fi
+    exit 0
+fi
+
+# Run docker services on remote vps,
+if [ "$1" == "up:vps" ]; then
+    echo " ===== taking off ===>>>>"
+
+    if [ "$FULL_SSH_USERNAME" == '' ]; then
+        echo "SSH username is required. Please set the FLY_SSH_USERNAME environment variable." >&2
+        exit 1
+    elif [ "$FLY_REMOTE_APP_DIR" == '' ]; then
+        echo "Remote app directory is required. Please set the FLY_REMOTE_APP_DIR environment variable." >&2
+        exit 1
+    fi
+
+    shift 1
+
+    DEST_DIR="$FLY_REMOTE_APP_DIR/$APP_ROOT"
+    ARGS=("$@")
     # to pull image from gitlab registry
     #  docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
     #  docker pull $IMAGE_NAME:$IMAGE_TAG &&
-    ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
-    cd $DEST_DIR/$APP_NAME &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+
+    if [ -n "$FLY_SSH_KEY" ]; then
+        ssh -i "$FLY_SSH_KEY" -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            cd $DEST_DIR &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+    else
+        ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            if [ -f $DEST_DIR ]; then
+                cd $DEST_DIR
+            else
+                mkdir -p $DEST_DIR
+            fi &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+    fi
 
     exit 0;
 fi
