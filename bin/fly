@@ -734,7 +734,6 @@ export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
 export FORWARD_MEMCACHED_PORT=$(get_random_port)
 export FORWARD_MEILISEARCH_PORT=$(get_random_port)
 
-echo $FORWARD_VALKEY_PORT
 # Deploy to a VPS server
 if [ "$1" == "to:vps" ]; then
     if [ "$FULL_SSH_USERNAME" == '' ]; then
