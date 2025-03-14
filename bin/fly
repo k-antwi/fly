@@ -666,13 +666,17 @@ if [ "$1" == "up:vps" ]; then
     FULL_SSH_USERNAME="$1"
     DEST_DIR="$2"
     PARSE_SSH_KEY="$3"
+    DEFAULT_COMMAND="up -d"
 
+    shift 2
+    ARGS=("${@:-$DEFAULT_COMMAND}")
     # to pull image from gitlab registry
     #  docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
     #  docker pull $IMAGE_NAME:$IMAGE_TAG &&
-    ssh -o StrictHostKeyChecking=no "$PARSE_SSH_KEY" "$FULL_SSH_USERNAME" "
-        cd $DEST_DIR/$APP_NAME &&
-        docker compose up -d"
+    ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+    cd $DEST_DIR/$APP_NAME &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+
+    exit 0;
 fi
 
 # Run Docker Compose with the defined arguments...

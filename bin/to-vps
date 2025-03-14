@@ -28,12 +28,12 @@ echo "$SOURCE_DIR $FULL_SSH_USERNAME:$DEST_DIR"
 
 # Build the exclude options
 EXCLUDE_OPTIONS=""
-for dir in "${EXCLUDE_DIRS[@]}"; do
-    EXCLUDE_OPTIONS+="--exclude=$dir "
-done
+#for dir in "${EXCLUDE_DIRS[@]}"; do
+#    EXCLUDE_OPTIONS+="--exclude=$dir "
+#done
 
 # Compress the source directory
-tar -czf "$ARCHIVE_NAME" "$PARSE_SSH_KEY" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
+tar -czf "$ARCHIVE_NAME" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
 
 # SCP command to copy files
 scp -r "$ARCHIVE_NAME" "$DEST_USER@$DEST_HOST:$DEST_DIR"
