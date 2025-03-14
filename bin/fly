@@ -654,7 +654,6 @@ elif [ "$1" == "open" ]; then
 fi
 
 
-
 # Deploy to a VPS server
 if [ "$1" == "to:vps" ]; then
     if [ "$FULL_SSH_USERNAME" == '' ]; then
@@ -662,8 +661,12 @@ if [ "$1" == "to:vps" ]; then
         exit 1
     fi
 
-    shift 1
-    SOURCE_DIR="$1"
+    if [ "$2" == "--with" ]; then
+        SOURCE_DIR="$3"
+    else
+        SOURCE_DIR="."
+    fi
+
     DEST_DIR="$FLY_REMOTE_APP_DIR"
 
     # Call the to-vps script

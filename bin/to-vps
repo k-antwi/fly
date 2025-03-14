@@ -44,6 +44,7 @@ elif [ -d ".github" ]; then
 fi
 
 # Compress the source directory
+echo "==>>> Compressing files..."
 tar -czf "$ARCHIVE_NAME" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
 
 if [ -n "$FLY_SSH_KEY" ]; then
