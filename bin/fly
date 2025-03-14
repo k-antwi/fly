@@ -705,8 +705,9 @@ if [ "$1" == "up:vps" ]; then
             if [ -f $DEST_DIR ]; then
                 cd $DEST_DIR
             else
-                mkdir -p $DEST_DIR
-            fi &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+                mkdir -p $DEST_DIR && cd $DEST_DIR
+            fi && " \
+            "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
     fi
 
     exit 0;
