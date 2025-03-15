@@ -786,12 +786,70 @@ if [ "$1" == "up:vps" ]; then
 
     if [ -n "$FLY_SSH_KEY" ]; then
         ssh -i "$FLY_SSH_KEY" -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            function get_random_port() {
+                LOW_BOUND=49152
+                RANGE=16384
+                while true; do
+                    CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
+                    (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
+                    if [ $? -ne 0 ]; then
+                        echo $CANDIDATE
+                        break
+                    fi
+                done
+            }
+
+            export APP_PORT=$(get_random_port)
+            export FORWARD_DB_PORT=$(get_random_port)
+            export FORWARD_REDIS_PORT=$(get_random_port)
+            export FORWARD_VALKEY_PORT=$(get_random_port)
+            export FORWARD_MONGODB_PORT=$(get_random_port)
+            export FORWARD_PGSQL_PORT=$(get_random_port)
+            export VITE_PORT=$(get_random_port)
+            export PUSHER_PORT=$(get_random_port)
+            export PUSHER_METRICS_PORT=$(get_random_port)
+            export FORWARD_TYPESENSE_PORT=$(get_random_port)
+            export ODOO_APP_PORT=$(get_random_port)
+            export ODOO_LONG_POLLING=$(get_random_port)
+            export FORWARD_MINIO_PORT=$(get_random_port)
+            export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+            export FORWARD_MEMCACHED_PORT=$(get_random_port)
+            export FORWARD_MEILISEARCH_PORT=$(get_random_port)
             export WWWUSER=$(id -u)
             export WWWGROUP=$(id -g)
             cd $DEST_DIR &&" \
             "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
     else
         ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            function get_random_port() {
+                LOW_BOUND=49152
+                RANGE=16384
+                while true; do
+                    CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
+                    (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
+                    if [ $? -ne 0 ]; then
+                        echo $CANDIDATE
+                        break
+                    fi
+                done
+            }
+
+            export APP_PORT=$(get_random_port)
+            export FORWARD_DB_PORT=$(get_random_port)
+            export FORWARD_REDIS_PORT=$(get_random_port)
+            export FORWARD_VALKEY_PORT=$(get_random_port)
+            export FORWARD_MONGODB_PORT=$(get_random_port)
+            export FORWARD_PGSQL_PORT=$(get_random_port)
+            export VITE_PORT=$(get_random_port)
+            export PUSHER_PORT=$(get_random_port)
+            export PUSHER_METRICS_PORT=$(get_random_port)
+            export FORWARD_TYPESENSE_PORT=$(get_random_port)
+            export ODOO_APP_PORT=$(get_random_port)
+            export ODOO_LONG_POLLING=$(get_random_port)
+            export FORWARD_MINIO_PORT=$(get_random_port)
+            export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+            export FORWARD_MEMCACHED_PORT=$(get_random_port)
+            export FORWARD_MEILISEARCH_PORT=$(get_random_port)
             export WWWUSER=$(id -u)
             export WWWGROUP=$(id -g)
             if [ -f $DEST_DIR ]; then
