@@ -164,8 +164,8 @@ fi
 # Define environment variables...
 export APP_NAME=${APP_NAME:-"fly-app"}
 export APP_SERVICE=${APP_SERVICE:-"laravel.fly"}
-export WWWUSER=${WWWUSER:-$UID}
-export WWWGROUP=${WWWGROUP:-$(id -g)}
+export WWWUSER=$(id -u)
+export WWWGROUP=$(id -g)
 
 
 export FLY_FILES=${FLY_FILES:-""}
