@@ -773,9 +773,13 @@ if [ "$1" == "up:vps" ]; then
     fi
 
     shift 1
-
     DEST_DIR="$FLY_REMOTE_APP_DIR/$APP_ROOT"
     ARGS=("$@")
+
+    if [ "$1" == '' ]; then
+        ARGS+=("up")
+    fi
+
     # to pull image from gitlab registry
     #  docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
     #  docker pull $IMAGE_NAME:$IMAGE_TAG &&
