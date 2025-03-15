@@ -833,7 +833,6 @@ if [ "$1" == "up:vps" ]; then
                     fi
                 done
             }
-
             export APP_PORT=$(get_random_port)
             export FORWARD_DB_PORT=$(get_random_port)
             export FORWARD_REDIS_PORT=$(get_random_port)
