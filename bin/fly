@@ -786,9 +786,14 @@ if [ "$1" == "up:vps" ]; then
 
     if [ -n "$FLY_SSH_KEY" ]; then
         ssh -i "$FLY_SSH_KEY" -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
-            cd $DEST_DIR &&" \ "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+            export WWWUSER=$(id -u)
+            export WWWGROUP=$(id -g)
+            cd $DEST_DIR &&" \
+            "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
     else
         ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            export WWWUSER=$(id -u)
+            export WWWGROUP=$(id -g)
             if [ -f $DEST_DIR ]; then
                 cd $DEST_DIR
             else
