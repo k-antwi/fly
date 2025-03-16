@@ -817,22 +817,10 @@ if [ "$1" == "up:vps" ]; then
             export FORWARD_MEILISEARCH_PORT=$(get_random_port)
             export WWWUSER=$(id -u)
             export WWWGROUP=$(id -g)
-            cd $DEST_DIR &&" \
-            "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+            cd $DEST_DIR && \
+            ${DOCKER_COMPOSE[*]} ${ARGS[*]}"
     else
         ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
-            function get_random_port() {
-                LOW_BOUND=49152
-                RANGE=16384
-                while true; do
-                    CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
-                    (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
-                    if [ $? -ne 0 ]; then
-                        echo $CANDIDATE
-                        break
-                    fi
-                done
-            }
             export APP_PORT=$(get_random_port)
             export FORWARD_DB_PORT=$(get_random_port)
             export FORWARD_REDIS_PORT=$(get_random_port)
