@@ -33,7 +33,7 @@ DEST_DIR="$3"
 # split the full ssh username into user and host
 #IFS='@' read -r DEST_USER DEST_HOST <<< "$FULL_SSH_USERNAME"
 
-EXCLUDE_DIRS=("storage" "node_modules" "tests" "vendor" ".env")
+EXCLUDE_DIRS=("'./storage'" "'./node_modules'" "'./tests'" "'./vendor'" "'./.env'")
 APP_ROOT=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')
 ARCHIVE_NAME="$APP_ROOT.tar.gz"
 
@@ -41,19 +41,26 @@ echo "to >>> $SOURCE_DIR $FULL_SSH_USERNAME:$DEST_DIR"
 
 # Build the exclude options
 EXCLUDE_OPTIONS=""
+EXCLUDE_LIST=""
 for dir in "${EXCLUDE_DIRS[@]}"; do
     EXCLUDE_OPTIONS+="--exclude=$dir "
+    EXCLUDE_LIST+="$dir "
 done
 
 if [ -f ".git" ]; then
-    EXCLUDE_OPTIONS+="--exclude=.git "
+    EXCLUDE_OPTIONS+="--exclude='./.git' "
+    EXCLUDE_LIST+="'./.git' "
 elif [ -d ".github" ]; then
-    EXCLUDE_OPTIONS+="--exclude=.github "
+    EXCLUDE_OPTIONS+="--exclude='./.github' "
+    EXCLUDE_LIST+="'./.github' "
 fi
 
 # Compress the source directory
 echo "==>>> Compressing files..."
-tar -czvf "$ARCHIVE_NAME" "$EXCLUDE_OPTIONS" -C "$SOURCE_DIR" .
+echo "===>> Files to exclude: $EXCLUDE_LIST ..."
+#tar -czvf "$ARCHIVE_NAME" -C "$SOURCE_DIR" . "$EXCLUDE_OPTIONS"
+tar -czvf "$ARCHIVE_NAME" -C "$SOURCE_DIR" . "$EXCLUDE_OPTIONS"
+exit 0;
 
 if [ -n "$FLY_SSH_KEY" ]; then
   # SCP command to copy files

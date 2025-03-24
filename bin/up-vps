@@ -1,0 +1,831 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+UNAMEOUT="$(uname -s)"
+
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# Verify operating system is supported...
+case "${UNAMEOUT}" in
+    Linux*)             MACHINE=linux;;
+    Darwin*)            MACHINE=mac;;
+    *)                  MACHINE="UNKNOWN"
+esac
+
+if [ "$MACHINE" == "UNKNOWN" ]; then
+    echo "Unsupported operating system [$(uname -s)]. Fly supports macOS, Linux, and Windows (WSL2)." >&2
+
+    exit 1
+fi
+
+# Determine if stdout is a terminal...
+if test -t 1; then
+    # Determine if colors are supported...
+    ncolors=$(tput colors)
+
+    if test -n "$ncolors" && test "$ncolors" -ge 8; then
+        BOLD="$(tput bold)"
+        YELLOW="$(tput setaf 3)"
+        GREEN="$(tput setaf 2)"
+        NC="$(tput sgr0)"
+    fi
+fi
+
+# Function to check if a port is in use
+is_port_in_use() {
+    local port=$1
+    if netstat -tuln | grep -q ":$port "; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function that prints the available commands...
+function display_help {
+    echo "Fly"
+    echo
+    echo "${YELLOW}Usage:${NC}" >&2
+    echo "  fly COMMAND [options] [arguments]"
+    echo
+    echo "Unknown commands are passed to the docker-compose binary."
+    echo
+    echo "${YELLOW}docker-compose Commands:${NC}"
+    echo "  ${GREEN}fly up${NC}        Start the application"
+    echo "  ${GREEN}fly up -d${NC}     Start the application in the background"
+    echo "  ${GREEN}fly stop${NC}      Stop the application"
+    echo "  ${GREEN}fly restart${NC}   Restart the application"
+    echo "  ${GREEN}fly ps${NC}        Display the status of all containers"
+    echo
+    echo "${YELLOW}Deployment Commands:${NC}"
+    echo "  ${GREEN}fly deploy${NC}        Deploy the application"
+    echo
+    echo "${YELLOW}Artisan Commands:${NC}"
+    echo "  ${GREEN}fly artisan ...${NC}          Run an Artisan command"
+    echo "  ${GREEN}fly artisan queue:work${NC}"
+    echo
+    echo "${YELLOW}PHP Commands:${NC}"
+    echo "  ${GREEN}fly php ...${NC}   Run a snippet of PHP code"
+    echo "  ${GREEN}fly php -v${NC}"
+    echo
+    echo "${YELLOW}Composer Commands:${NC}"
+    echo "  ${GREEN}fly composer ...${NC}                       Run a Composer command"
+    echo "  ${GREEN}fly composer require laravel/sanctum${NC}"
+    echo
+    echo "${YELLOW}Node Commands:${NC}"
+    echo "  ${GREEN}fly node ...${NC}         Run a Node command"
+    echo "  ${GREEN}fly node --version${NC}"
+    echo
+    echo "${YELLOW}NPM Commands:${NC}"
+    echo "  ${GREEN}fly npm ...${NC}        Run a npm command"
+    echo "  ${GREEN}fly npx${NC}            Run a npx command"
+    echo "  ${GREEN}fly npm run prod${NC}"
+    echo
+    echo "${YELLOW}PNPM Commands:${NC}"
+    echo "  ${GREEN}fly pnpm ...${NC}        Run a pnpm command"
+    echo "  ${GREEN}fly pnpx${NC}            Run a pnpx command"
+    echo "  ${GREEN}fly pnpm run prod${NC}"
+    echo
+    echo "${YELLOW}Yarn Commands:${NC}"
+    echo "  ${GREEN}fly yarn ...${NC}        Run a Yarn command"
+    echo "  ${GREEN}fly yarn run prod${NC}"
+    echo
+    echo "${YELLOW}Bun Commands:${NC}"
+    echo "  ${GREEN}fly bun ...${NC}        Run a bun command"
+    echo "  ${GREEN}fly bunx${NC}           Run a bunx command"
+    echo "  ${GREEN}fly bun run prod${NC}"
+    echo
+    echo "${YELLOW}Database Commands:${NC}"
+    echo "  ${GREEN}fly mysql${NC}     Start a MySQL CLI session within the 'mysql' container"
+    echo "  ${GREEN}fly mariadb${NC}   Start a MySQL CLI session within the 'mariadb' container"
+    echo "  ${GREEN}fly psql${NC}      Start a PostgreSQL CLI session within the 'pgsql' container"
+    echo "  ${GREEN}fly mongodb${NC}   Start a Mongo Shell session within the 'mongodb' container"
+    echo "  ${GREEN}fly redis${NC}     Start a Redis CLI session within the 'redis' container"
+    echo "  ${GREEN}fly valkey${NC}    Start a Valkey CLI session within the 'valkey' container"
+    echo
+    echo "${YELLOW}Debugging:${NC}"
+    echo "  ${GREEN}fly debug ...${NC}          Run an Artisan command in debug mode"
+    echo "  ${GREEN}fly debug queue:work${NC}"
+    echo
+    echo "${YELLOW}Running Tests:${NC}"
+    echo "  ${GREEN}fly test${NC}          Run the PHPUnit tests via the Artisan test command"
+    echo "  ${GREEN}fly phpunit ...${NC}   Run PHPUnit"
+    echo "  ${GREEN}fly pest ...${NC}      Run Pest"
+    echo "  ${GREEN}fly pint ...${NC}      Run Pint"
+    echo "  ${GREEN}fly dusk${NC}          Run the Dusk tests (Requires the laravel/dusk package)"
+    echo "  ${GREEN}fly dusk:fails${NC}    Re-run previously failed Dusk tests (Requires the laravel/dusk package)"
+    echo
+    echo "${YELLOW}Container CLI:${NC}"
+    echo "  ${GREEN}fly shell${NC}        Start a shell session within the application container"
+    echo "  ${GREEN}fly bash${NC}         Alias for 'fly shell'"
+    echo "  ${GREEN}fly root-shell${NC}   Start a root shell session within the application container"
+    echo "  ${GREEN}fly root-bash${NC}    Alias for 'fly root-shell'"
+    echo "  ${GREEN}fly tinker${NC}       Start a new Laravel Tinker session"
+    echo
+    echo "${YELLOW}Sharing:${NC}"
+    echo "  ${GREEN}fly share${NC}   Share the application publicly via a temporary URL"
+    echo "  ${GREEN}fly open${NC}    Open the site in your browser"
+    echo
+    echo "${YELLOW}Binaries:${NC}"
+    echo "  ${GREEN}fly bin ...${NC}   Run Composer binary scripts from the vendor/bin directory"
+    echo "  ${GREEN}fly run ...${NC}   Run a command within the application container"
+    echo
+    echo "${YELLOW}Customization:${NC}"
+    echo "  ${GREEN}fly artisan fly:publish${NC}   Publish the Fly configuration files"
+    echo "  ${GREEN}fly build --no-cache${NC}       Rebuild all of the Fly containers"
+
+    exit 1
+}
+
+# Proxy the "help" command...
+if [ $# -gt 0 ]; then
+    if [ "$1" == "help" ] || [ "$1" == "-h" ] || [ "$1" == "-help" ] || [ "$1" == "--help" ]; then
+        display_help
+    fi
+else
+    display_help
+fi
+
+# Source the ".env" file so Laravel's environment variables are available...
+# shellcheck source=/dev/null
+if [ -n "$APP_ENV" ] && [ -f ./.env."$APP_ENV" ]; then
+  source ./.env."$APP_ENV";
+elif [ -f ./.env ]; then
+  source ./.env;
+fi
+
+if [ -n "$FLY_SSH_USERNAME" ]; then
+    FULL_SSH_USERNAME="$FLY_SSH_USERNAME"
+fi
+
+
+# Define environment variables...
+export APP_NAME=${APP_NAME:-"fly-app"}
+export APP_SERVICE=${APP_SERVICE:-"laravel.fly"}
+export WWWUSER=$(id -u)
+export WWWGROUP=$(id -g)
+
+
+export FLY_FILES=${FLY_FILES:-""}
+export FLY_SHARE_DASHBOARD=${FLY_SHARE_DASHBOARD:-4040}
+export FLY_SHARE_SERVER_HOST=${FLY_SHARE_SERVER_HOST:-"laravel-fly.site"}
+export FLY_SHARE_SERVER_PORT=${FLY_SHARE_SERVER_PORT:-8080}
+export FLY_SHARE_SUBDOMAIN=${FLY_SHARE_SUBDOMAIN:-""}
+export FLY_SHARE_DOMAIN=${FLY_SHARE_DOMAIN:-"$FLY_SHARE_SERVER_HOST"}
+export FLY_SHARE_SERVER=${FLY_SHARE_SERVER:-""}
+
+APP_ROOT=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]')
+
+
+# Function that outputs Fly is not running...
+function fly_is_not_running {
+    echo "${BOLD}Fly is not running.${NC}" >&2
+    echo "" >&2
+    echo "${BOLD}You may Fly using the following commands:${NC} './vendor/bin/fly up' or './vendor/bin/fly up -d'" >&2
+
+    exit 1
+}
+
+# Define Docker Compose command prefix...
+if docker compose &> /dev/null; then
+    DOCKER_COMPOSE=(docker compose)
+else
+    DOCKER_COMPOSE=(docker-compose)
+fi
+
+if [ -n "$FLY_FILES" ]; then
+    # Convert FLY_FILES to an array...
+    IFS=':' read -ra FLY_FILES <<< "$FLY_FILES"
+
+    for FILE in "${FLY_FILES[@]}"; do
+        if [ -f "$FILE" ]; then
+            DOCKER_COMPOSE+=(-f "$FILE")
+        else
+            echo "${BOLD}Unable to find Docker Compose file: '${FILE}'${NC}" >&2
+
+            exit 1
+        fi
+    done
+fi
+
+EXEC="yes"
+
+if [ -z "$FLY_SKIP_CHECKS" ]; then
+    # Ensure that Docker is running...
+    if ! docker info > /dev/null 2>&1; then
+        echo "${BOLD}Docker is not running.${NC}" >&2
+
+        exit 1
+    fi
+
+    # Determine if Fly is currently up...
+    if "${DOCKER_COMPOSE[@]}" ps "$APP_SERVICE" 2>&1 | grep 'Exit\|exited'; then
+        echo "${BOLD}Shutting down old Fly processes...${NC}" >&2
+
+        "${DOCKER_COMPOSE[@]}" down > /dev/null 2>&1
+
+        EXEC="no"
+    elif [ -z "$("${DOCKER_COMPOSE[@]}" ps -q)" ]; then
+        EXEC="no"
+    fi
+fi
+
+ARGS=()
+
+# Proxy PHP commands to the "php" binary on the application container...
+if [ "$1" == "php" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "php")
+    else
+        fly_is_not_running
+    fi
+
+# Proxy vendor binary commands on the application container...
+elif [ "$1" == "bin" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        CMD=$1
+        shift 1
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" ./vendor/bin/"$CMD")
+    else
+        fly_is_not_running
+    fi
+
+# Proxy commands on the application container...
+elif [ "$1" == "run" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        CMD=$1
+        shift 1
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "$CMD")
+    else
+        fly_is_not_running
+    fi
+
+# Proxy docker-compose commands to the docker-compose binary on the application container...
+elif [ "$1" == "docker-compose" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "${DOCKER_COMPOSE[@]}")
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Composer commands to the "composer" binary on the application container...
+elif [ "$1" == "composer" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" "composer")
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Artisan commands to the "artisan" binary on the application container...
+elif [ "$1" == "artisan" ] || [ "$1" == "art" ] || [ "$1" == "a" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php artisan)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "debug" command to the "php artisan" binary on the application container with xdebug enabled...
+elif [ "$1" == "debug" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly -e XDEBUG_TRIGGER=1)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php artisan)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "test" command to the "php artisan test" Artisan command...
+elif [ "$1" == "test" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php artisan test)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "phpunit" command to "php vendor/bin/phpunit"...
+elif [ "$1" == "phpunit" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php vendor/bin/phpunit)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "pest" command to "php vendor/bin/pest"...
+elif [ "$1" == "pest" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php vendor/bin/pest)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "pint" command to "php vendor/bin/pint"...
+elif [ "$1" == "pint" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php vendor/bin/pint)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "dusk" command to the "php artisan dusk" Artisan command...
+elif [ "$1" == "dusk" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(-e "APP_URL=http://${APP_SERVICE}")
+        ARGS+=(-e "DUSK_DRIVER_URL=http://selenium:4444/wd/hub")
+        ARGS+=("$APP_SERVICE" php artisan dusk)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy the "dusk:fails" command to the "php artisan dusk:fails" Artisan command...
+elif [ "$1" == "dusk:fails" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(-e "APP_URL=http://${APP_SERVICE}")
+        ARGS+=(-e "DUSK_DRIVER_URL=http://selenium:4444/wd/hub")
+        ARGS+=("$APP_SERVICE" php artisan dusk:fails)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a Laravel Tinker session within the application container...
+elif [ "$1" == "tinker" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" php artisan tinker)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Node commands to the "node" binary on the application container...
+elif [ "$1" == "node" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" node)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy NPM commands to the "npm" binary on the application container...
+elif [ "$1" == "npm" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" npm)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy NPX commands to the "npx" binary on the application container...
+elif [ "$1" == "npx" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" npx)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy PNPM commands to the "pnpm" binary on the application container...
+elif [ "$1" == "pnpm" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" pnpm)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy PNPX commands to the "pnpx" binary on the application container...
+elif [ "$1" == "pnpx" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" pnpx)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Yarn commands to the "yarn" binary on the application container...
+elif [ "$1" == "yarn" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" yarn)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Bun commands to the "bun" binary on the application container...
+elif [ "$1" == "bun" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bun)
+    else
+        fly_is_not_running
+    fi
+
+# Proxy Bun X commands to the "bunx" binary on the application container...
+elif [ "$1" == "bunx" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bunx)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a MySQL CLI terminal session within the "mysql" container...
+elif [ "$1" == "mysql" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(mysql bash -c)
+        ARGS+=("MYSQL_PWD=\${MYSQL_PASSWORD} mysql -u \${MYSQL_USER} \${MYSQL_DATABASE}")
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a MySQL CLI terminal session within the "mariadb" container...
+elif [ "$1" == "mariadb" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(mariadb bash -c)
+        ARGS+=("MYSQL_PWD=\${MYSQL_PASSWORD} mariadb -u \${MYSQL_USER} \${MYSQL_DATABASE}")
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a PostgreSQL CLI terminal session within the "pgsql" container...
+elif [ "$1" == "psql" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(pgsql bash -c)
+        ARGS+=("PGPASSWORD=\${PGPASSWORD} psql -U \${POSTGRES_USER} \${POSTGRES_DB}")
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a Bash shell within the application container...
+elif [ "$1" == "shell" ] || [ "$1" == "bash" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u fly)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bash)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a root user Bash shell within the application container...
+elif [ "$1" == "root-shell" ] || [ "$1" == "root-bash" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec -u root)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=("$APP_SERVICE" bash)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a MongoDB Shell within the "mongodb" container...
+elif [ "$1" == "mongodb" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(mongodb mongosh --port "${FORWARD_MONGODB_PORT:-27017}" --username "$MONGODB_USERNAME" --password "$MONGODB_PASSWORD" --authenticationDatabase admin)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a Redis CLI terminal session within the "redis" container...
+elif [ "$1" == "redis" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(redis redis-cli)
+    else
+        fly_is_not_running
+    fi
+
+# Initiate a Valkey CLI terminal session within the "valkey" container...
+elif [ "$1" == "valkey" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        ARGS+=(exec)
+        [ ! -t 0 ] && ARGS+=(-T)
+        ARGS+=(valkey valkey-cli)
+    else
+        fly_is_not_running
+    fi
+
+# Share the site...
+elif [ "$1" == "share" ]; then
+    shift 1
+
+    if [ "$EXEC" == "yes" ]; then
+        docker run --init --rm --add-host=host.docker.internal:host-gateway -p "$FLY_SHARE_DASHBOARD":4040 -t beyondcodegmbh/expose-server:latest share http://host.docker.internal:"$APP_PORT" \
+            --server-host="$FLY_SHARE_SERVER_HOST" \
+            --server-port="$FLY_SHARE_SERVER_PORT" \
+            --auth="$FLY_SHARE_TOKEN" \
+            --server="$FLY_SHARE_SERVER" \
+            --subdomain="$FLY_SHARE_SUBDOMAIN" \
+            --domain="$FLY_SHARE_DOMAIN" \
+            "$@"
+
+        exit
+    else
+        fly_is_not_running
+    fi
+
+# Open the site...
+elif [ "$1" == "open" ]; then
+    shift 1
+
+    if command -v open &>/dev/null; then
+        OPEN="open"
+    elif command -v xdg-open &>/dev/null; then
+        OPEN="xdg-open"
+    else
+        echo "Neither open nor xdg-open is available. Exiting."
+        exit 1
+    fi
+
+    if [ "$EXEC" == "yes" ]; then
+
+        if [[ -n "$APP_PORT" && "$APP_PORT" != "80" ]]; then
+            FULL_URL="${APP_URL}:${APP_PORT}"
+        else
+            FULL_URL="$APP_URL"
+        fi
+
+        $OPEN "$FULL_URL"
+
+        exit
+    else
+        fly_is_not_running
+    fi
+fi
+
+# Function to check if a port is in use
+is_port_in_use() {
+    local port=$1
+    local ip="127.0.0.1"
+
+    if netstat -tuln | grep -q "$ip:$port"; then
+        echo "Port $port is available." >&2
+        return 0
+    else
+        echo "Port $port is in use." >&2
+        return 1
+    fi
+}
+
+# Function to list all available ports
+list_available_ports() {
+    netstat -tuln | awk 'NR>2 {print $4}' | awk -F: '{print $NF}' | sort -n | uniq
+}
+
+function get_random_port() {
+    LOW_BOUND=49152
+    RANGE=16384
+    while true; do
+        CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
+        (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            echo $CANDIDATE
+            break
+        fi
+    done
+}
+
+# Function to find the next available port starting from a given port
+find_next_available_port() {
+    local start_port=$1
+    local port=$start_port
+
+    while (is_port_in_use "$port"); do
+        port=$((port + 1))
+    done
+
+    echo $port
+}
+
+export APP_PORT=$(get_random_port)
+export FORWARD_DB_PORT=$(get_random_port)
+export FORWARD_REDIS_PORT=$(get_random_port)
+export FORWARD_VALKEY_PORT=$(get_random_port)
+export FORWARD_MONGODB_PORT=$(get_random_port)
+export FORWARD_PGSQL_PORT=$(get_random_port)
+export VITE_PORT=$(get_random_port)
+export PUSHER_PORT=$(get_random_port)
+export PUSHER_METRICS_PORT=$(get_random_port)
+export FORWARD_TYPESENSE_PORT=$(get_random_port)
+export ODOO_APP_PORT=$(get_random_port)
+export ODOO_LONG_POLLING=$(get_random_port)
+export FORWARD_MINIO_PORT=$(get_random_port)
+export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+export FORWARD_MEMCACHED_PORT=$(get_random_port)
+export FORWARD_MEILISEARCH_PORT=$(get_random_port)
+
+# Deploy to a VPS server
+if [ "$1" == "to:vps" ]; then
+    if [ "$FULL_SSH_USERNAME" == '' ]; then
+        echo "SSH username is required. Please set the FLY_SSH_USERNAME environment variable." >&2
+        exit 1
+    fi
+
+    if [ "$2" == "--with" ]; then
+        SOURCE_DIR="$3"
+    else
+        SOURCE_DIR="."
+    fi
+
+    DEST_DIR="$FLY_REMOTE_APP_DIR"
+
+    # Call the to-vps script
+    if [ -f ./bin/to-vps ]; then
+          ./bin/to-vps "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR"
+    elif [ -f ./vendor/bin/to-vps ]; then
+          ./vendor/bin/to-vps "$SOURCE_DIR" "$FULL_SSH_USERNAME" "$DEST_DIR"
+    else
+        echo "to-vps flight is unreachable"
+    fi
+    exit 0
+fi
+
+# Run docker services on remote vps,
+if [ "$1" == "up:vps" ]; then
+    echo " ===== taking off ===>>>>"
+
+    if [ "$FULL_SSH_USERNAME" == '' ]; then
+        echo "SSH username is required. Please set the FLY_SSH_USERNAME environment variable." >&2
+        exit 1
+    elif [ "$FLY_REMOTE_APP_DIR" == '' ]; then
+        echo "Remote app directory is required. Please set the FLY_REMOTE_APP_DIR environment variable." >&2
+        exit 1
+    fi
+
+    shift 1
+    DEST_DIR="$FLY_REMOTE_APP_DIR/$APP_ROOT"
+    ARGS=("$@")
+
+    if [ "$1" == '' ]; then
+        ARGS+=("up")
+    fi
+
+    # to pull image from gitlab registry
+    #  docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
+    #  docker pull $IMAGE_NAME:$IMAGE_TAG &&
+
+    if [ -n "$FLY_SSH_KEY" ]; then
+        ssh -i "$FLY_SSH_KEY" -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            function get_random_port() {
+                LOW_BOUND=49152
+                RANGE=16384
+                while true; do
+                    CANDIDATE=$[$LOW_BOUND + ($RANDOM % $RANGE)]
+                    (echo -n >/dev/tcp/127.0.0.1/${CANDIDATE}) >/dev/null 2>&1
+                    if [ $? -ne 0 ]; then
+                        echo $CANDIDATE
+                        break
+                    fi
+                done
+            }
+
+            export APP_PORT=$(get_random_port)
+            export FORWARD_DB_PORT=$(get_random_port)
+            export FORWARD_REDIS_PORT=$(get_random_port)
+            export FORWARD_VALKEY_PORT=$(get_random_port)
+            export FORWARD_MONGODB_PORT=$(get_random_port)
+            export FORWARD_PGSQL_PORT=$(get_random_port)
+            export VITE_PORT=$(get_random_port)
+            export PUSHER_PORT=$(get_random_port)
+            export PUSHER_METRICS_PORT=$(get_random_port)
+            export FORWARD_TYPESENSE_PORT=$(get_random_port)
+            export ODOO_APP_PORT=$(get_random_port)
+            export ODOO_LONG_POLLING=$(get_random_port)
+            export FORWARD_MINIO_PORT=$(get_random_port)
+            export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+            export FORWARD_MEMCACHED_PORT=$(get_random_port)
+            export FORWARD_MEILISEARCH_PORT=$(get_random_port)
+            export WWWUSER=$(id -u)
+            export WWWGROUP=$(id -g)
+            cd $DEST_DIR && \
+            ${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+    else
+        ssh -o StrictHostKeyChecking=no "$FULL_SSH_USERNAME" "
+            export APP_PORT=$(get_random_port)
+            export FORWARD_DB_PORT=$(get_random_port)
+            export FORWARD_REDIS_PORT=$(get_random_port)
+            export FORWARD_VALKEY_PORT=$(get_random_port)
+            export FORWARD_MONGODB_PORT=$(get_random_port)
+            export FORWARD_PGSQL_PORT=$(get_random_port)
+            export VITE_PORT=$(get_random_port)
+            export PUSHER_PORT=$(get_random_port)
+            export PUSHER_METRICS_PORT=$(get_random_port)
+            export FORWARD_TYPESENSE_PORT=$(get_random_port)
+            export ODOO_APP_PORT=$(get_random_port)
+            export ODOO_LONG_POLLING=$(get_random_port)
+            export FORWARD_MINIO_PORT=$(get_random_port)
+            export FORWARD_MINIO_CONSOLE_PORT=$(get_random_port)
+            export FORWARD_MEMCACHED_PORT=$(get_random_port)
+            export FORWARD_MEILISEARCH_PORT=$(get_random_port)
+            export WWWUSER=$(id -u)
+            export WWWGROUP=$(id -g)
+            if [ -f $DEST_DIR ]; then
+                cd $DEST_DIR
+            else
+                mkdir -p $DEST_DIR && cd $DEST_DIR
+            fi && " \
+            "${DOCKER_COMPOSE[*]} ${ARGS[*]}"
+    fi
+
+    exit 0;
+fi
