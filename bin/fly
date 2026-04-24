@@ -2,6 +2,15 @@
 
 set -o errexit
 
+# Resolve the directory where this script lives, following symlinks
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+FLY_SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
 UNAMEOUT="$(uname -s)"
 
 export LANG=en_US.UTF-8
@@ -750,7 +759,9 @@ if [ "$1" == "to:vps" ]; then
     DEST_DIR="$FLY_REMOTE_APP_DIR"
 
     # Call the to-vps script
-    if [ -f ./bin/to-vps ]; then
+    if [ -f "$FLY_SCRIPT_DIR/to-vps" ]; then
+          "$FLY_SCRIPT_DIR/to-vps" "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR"
+    elif [ -f ./bin/to-vps ]; then
           ./bin/to-vps "${SOURCE_DIR}" "$FULL_SSH_USERNAME" "$DEST_DIR"
     elif [ -f ./vendor/bin/to-vps ]; then
           ./vendor/bin/to-vps "$SOURCE_DIR" "$FULL_SSH_USERNAME" "$DEST_DIR"
