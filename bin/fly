@@ -788,7 +788,7 @@ if [ "$1" == "up:vps" ]; then
     ARGS=("$@")
 
     if [ "$1" == '' ]; then
-        ARGS+=("up")
+        ARGS+=("up -d")
     fi
 
     # to pull image from gitlab registry
